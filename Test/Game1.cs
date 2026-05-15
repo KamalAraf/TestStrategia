@@ -9,17 +9,21 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
 
+    Texture2D pixel;
+    Vector2 position = new Vector2(200, 200);
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
+
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
+
+        Window.Title = "titolo";
     }
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
-
         base.Initialize();
     }
 
@@ -27,24 +31,49 @@ public class Game1 : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        // TODO: use this.Content to load your game content here
+        // pixel 1x1 bianco
+        pixel = new Texture2D(GraphicsDevice, 1, 1);
+        pixel.SetData(new[] { Color.White });
     }
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+        if (Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
 
-        // TODO: Add your update logic here
+        var mouse = Mouse.GetState();
+        Vector2 target = new Vector2(mouse.X, mouse.Y);
+
+        Vector2 direction = target - position;
+
+        if (direction.Length() > 1f)
+        {
+            direction.Normalize();
+            position += direction * 2f;
+        }
 
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(new Color(45, 45, 48));
 
-        // TODO: Add your drawing code here
+        _spriteBatch.Begin();
+
+        _spriteBatch.Draw(
+            pixel,
+            position,
+            null,
+            Color.Red,
+            0f,
+            Vector2.Zero,
+            6f,
+            SpriteEffects.None,
+            0f
+        );
+
+        _spriteBatch.End();
 
         base.Draw(gameTime);
     }
