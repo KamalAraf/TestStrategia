@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MedievalWarSim.Core/MedievalWarSim.Core.csproj" />
+    <Project Path="src/MedievalWarSim.Game/MedievalWarSim.Game.csproj" />
+    <Project Path="src/MedievalWarSim.Rendering/MedievalWarSim.Rendering.csproj" />
+    <Project Path="src/MedievalWarSim.UI/MedievalWarSim.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MedievalWarSim.Core.Tests/MedievalWarSim.Core.Tests.csproj" />
+  </Folder>
+</Solution>

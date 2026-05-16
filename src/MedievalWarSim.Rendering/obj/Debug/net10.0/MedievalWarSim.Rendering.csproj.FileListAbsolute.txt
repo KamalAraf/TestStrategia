@@ -1,0 +1,16 @@
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\bin\Debug\net10.0\MedievalWarSim.Rendering.deps.json
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\bin\Debug\net10.0\MedievalWarSim.Rendering.dll
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\bin\Debug\net10.0\MedievalWarSim.Rendering.pdb
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\bin\Debug\net10.0\MedievalWarSim.Core.dll
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\bin\Debug\net10.0\MedievalWarSim.Core.pdb
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.csproj.AssemblyReference.cache
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.AssemblyInfoInputs.cache
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.AssemblyInfo.cs
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.csproj.CoreCompileInputs.cache
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.sourcelink.json
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\Medieval.67E23E0A.Up2Date
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.dll
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\refint\MedievalWarSim.Rendering.dll
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\MedievalWarSim.Rendering.pdb
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Rendering\obj\Debug\net10.0\ref\MedievalWarSim.Rendering.dll
