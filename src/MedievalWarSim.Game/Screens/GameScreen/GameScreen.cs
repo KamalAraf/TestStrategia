@@ -69,8 +69,9 @@ public partial class GameScreen : IDisposable
             X = _viewport.Width / 2f,
             Y = _viewport.Height / 2f
         };
-        _entityManager.GetUnitType(0) = new UnitTypeComponent { Type = UnitType.Infantry };
-        _entityManager.GetMove(0).Speed = UnitStats.RollSpeed(UnitType.Infantry);
+        var rt = (UnitType)Random.Shared.Next(5);
+        _entityManager.GetUnitType(0) = new UnitTypeComponent { Type = rt };
+        _entityManager.GetMove(0).Speed = UnitStats.RollSpeed(rt);
 
         RegisterCommands();
     }

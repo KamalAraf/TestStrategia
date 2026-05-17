@@ -270,8 +270,9 @@ public partial class GameScreen
                     int id = _entityManager.Create();
                     if (id < 0) break;
                     _entityManager.GetPosition(id) = new PositionComponent { X = x, Y = y };
-                    _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = UnitType.Infantry };
-                    _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(UnitType.Infantry);
+                    var rt = (UnitType)Random.Shared.Next(5);
+                    _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = rt };
+                    _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(rt);
                     created++;
                 }
 
@@ -298,9 +299,10 @@ public partial class GameScreen
                 System.Console.WriteLine("ERROR: entity limit reached (100000 max).");
                 return;
             }
+            var rt2 = (UnitType)Random.Shared.Next(5);
             _entityManager.GetPosition(id2) = new PositionComponent { X = x, Y = y };
-            _entityManager.GetUnitType(id2) = new UnitTypeComponent { Type = UnitType.Infantry };
-            _entityManager.GetMove(id2).Speed = UnitStats.RollSpeed(UnitType.Infantry);
+            _entityManager.GetUnitType(id2) = new UnitTypeComponent { Type = rt2 };
+            _entityManager.GetMove(id2).Speed = UnitStats.RollSpeed(rt2);
             System.Console.WriteLine($"Created unit {id2} at ({x:F0}, {y:F0}).");
         });
 
