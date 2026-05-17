@@ -295,7 +295,7 @@ public partial class GameScreen
             float drawMarginWorld = DrawMargin * invZ;
 
             // Draw explored circles (grey)
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
             foreach (var (wx, wy, radius) in _exploredCircles)
             {
                 if (wx + radius < viewLeft  - drawMarginWorld ||
