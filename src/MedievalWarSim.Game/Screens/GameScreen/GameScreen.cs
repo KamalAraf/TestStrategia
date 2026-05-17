@@ -43,8 +43,6 @@ public partial class GameScreen : IDisposable
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
 
-    private RenderTarget2D? _rtVision;
-    private RenderTarget2D? _rtExplored;
     private RenderTarget2D? _rtFinal;
     
     private int _rtW, _rtH;
@@ -107,8 +105,6 @@ public partial class GameScreen : IDisposable
     public void Dispose()
     {
         _shapeRenderer.Dispose();
-        _rtVision?.Dispose();
-        _rtExplored?.Dispose();
         _rtFinal?.Dispose();
     }
 }

@@ -256,30 +256,16 @@ public partial class GameScreen
         {
             int w = _viewport.Width, h = _viewport.Height;
 
-            // Ensure RTs match viewport
-            if (_rtExplored == null || _rtW != w || _rtH != h)
+            // Ensure fog RT matches viewport
+            if (_rtFinal == null || _rtW != w || _rtH != h)
             {
-                _rtVision?.Dispose(); _rtExplored?.Dispose(); _rtFinal?.Dispose();
-                _rtVision   = new RenderTarget2D(_graphicsDevice, w, h);
-                _rtExplored = new RenderTarget2D(_graphicsDevice, w, h, false,
-                    SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-                _rtFinal    = new RenderTarget2D(_graphicsDevice, w, h);
+                _rtFinal?.Dispose();
+                _rtFinal = new RenderTarget2D(_graphicsDevice, w, h);
                 _rtW = w; _rtH = h;
-                _graphicsDevice.SetRenderTarget(_rtExplored);
-                _graphicsDevice.Clear(Color.Black);
-                _graphicsDevice.SetRenderTarget(null);
             }
 
-            // ---- 1. RT_explored: accumulate grey circles ----
-            _graphicsDevice.SetRenderTarget(_rtExplored);
-            spriteBatch.Begin();
-            _shapeRenderer.DrawRectangle(spriteBatch, 0, 0, w, h,
-                new Color(180, 180, 180, 255), Color.Transparent, 0f);
-            spriteBatch.End();
-            // _rtExplored written, unbound
-
-            // ---- 2. RT_vision: white circles ----
-            _graphicsDevice.SetRenderTarget(_rtVision);
+            // ---- 1. Build fog mask: white circles on black ----
+            _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
@@ -291,22 +277,11 @@ public partial class GameScreen
                 float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
                 if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
                     sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
-                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
-                    Color.White, Color.Transparent);
+                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight, Color.White, Color.Transparent);
             }
             spriteBatch.End();
-            // _rtVision written, unbound
 
-            // ---- 3. RT_final: combine explored + current vision ----
-            _graphicsDevice.SetRenderTarget(_rtFinal);
-            _graphicsDevice.Clear(Color.Black);
-            spriteBatch.Begin();
-            spriteBatch.Draw(_rtExplored, Vector2.Zero, Color.White);
-            spriteBatch.Draw(_rtVision, Vector2.Zero, Color.White);
-            spriteBatch.End();
-            // _rtFinal has white=vision, grey=explored, black=unexplored
-
-            // ---- 4. Draw units onto backbuffer ----
+            // ---- 2. Draw units onto backbuffer ----
             _graphicsDevice.SetRenderTarget(null);
             _graphicsDevice.Clear(new Color(30, 30, 30));
             spriteBatch.Begin();
@@ -338,12 +313,12 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 5. Apply fog multiply ----
+            // ---- 3. Apply fog multiply: white=visible, black=hidden ----
             spriteBatch.Begin(SpriteSortMode.Deferred, FogBlend);
             spriteBatch.Draw(_rtFinal, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            // ---- 5. UI overlay ----
+            // ---- 4. UI overlay ----
             spriteBatch.Begin();
             if (_isDragging)
             {
@@ -356,11 +331,9 @@ public partial class GameScreen
                 if (rw > 2 || rh > 2)
                     _shapeRenderer.DrawRectangle(spriteBatch, rx, ry, rw, rh, new Color(0, 120, 0, 60), Color.LimeGreen, 1.5f);
             }
-
             string fpsText = $"FPS: {_fps}";
             Vector2 fpsSize = _font.MeasureString(fpsText);
             spriteBatch.DrawString(_font, fpsText, new Vector2(w - fpsSize.X - 8, 4), Color.Lime);
-
             string zoomText = $"Zoom: {_camera.Zoom:F2}x";
             Vector2 zoomSize = _font.MeasureString(zoomText);
             spriteBatch.DrawString(_font, zoomText, new Vector2(w - zoomSize.X - 8, h - zoomSize.Y - 4), Color.White);
