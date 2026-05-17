@@ -248,7 +248,7 @@ public class GameScreen : IDisposable
             foreach (int id in _selectedUnitIds.Order())
             {
                 var pos = _entityManager.GetPosition(id);
-                System.Console.WriteLine($"  {id} at ({pos.X:F1}; {pos.Y:F1})");
+                System.Console.WriteLine($"  {id} at ({pos.X:F1};{pos.Y:F1})");
             }
         });
 
@@ -385,9 +385,9 @@ public class GameScreen : IDisposable
         var move = _entityManager.GetMove(id);
         System.Console.WriteLine($"Unit {id}:");
         System.Console.WriteLine($"  Type:     {type.Type}");
-        System.Console.Write($"  Position: ({pos.X:F1}; {pos.Y:F1})");
+        System.Console.Write($"  Position: ({pos.X:F1};{pos.Y:F1})");
         if (move.IsMoving)
-            System.Console.Write($" -> ({move.TargetX:F1}; {move.TargetY:F1})");
+            System.Console.Write($" -> ({move.TargetX:F1};{move.TargetY:F1})");
         System.Console.WriteLine();
         System.Console.WriteLine($"  Selected: {_selectedUnitIds.Contains(id)}");
         System.Console.WriteLine($"  Moving:   {move.IsMoving}");
