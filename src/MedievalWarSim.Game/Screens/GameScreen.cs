@@ -25,7 +25,8 @@ public class GameScreen : IDisposable
     private int _dragEndX, _dragEndY;
 
     private const float UnitRadius = 16f;
-    private const float MoveSpeed = 120f;
+    private const float PixelsPerMeter = 32f;
+    private const float MoveSpeed = 3.5f * PixelsPerMeter; // 112 px/s
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
