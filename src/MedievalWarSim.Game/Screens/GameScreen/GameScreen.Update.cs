@@ -1,12 +1,23 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MedievalWarSim.Core.Enums;
 using MedievalWarSim.Game;
 
 namespace MedievalWarSim.Screens;
 
 public partial class GameScreen
 {
+    private static int UnitTypeToSides(UnitType type) => type switch
+    {
+        UnitType.Infantry => 4,
+        UnitType.Archer   => 3,
+        UnitType.Cavalry  => 5,
+        UnitType.Ballista => 8,
+        UnitType.Medic    => 6,
+        _ => 4
+    };
+
     public void Update(GameTime gameTime)
     {
         KeyboardState currentKey   = Keyboard.GetState();
@@ -48,6 +59,9 @@ public partial class GameScreen
             float dy = move.TargetY - pos.Y;
             float dist = MathF.Sqrt(dx * dx + dy * dy);
 
+            if (dist > 0.001f)
+                move.FacingAngle = MathF.Atan2(dy, dx) + MathF.PI / 2f;
+
             if (dist < 1f)
             {
                 move.IsMoving = false;
@@ -85,8 +99,12 @@ public partial class GameScreen
             if (sx + sr < -DrawMargin || sx - sr > _viewport.Width + DrawMargin ||
                 sy + sr < -DrawMargin || sy - sr > _viewport.Height + DrawMargin)
                 continue;
+
+            int    sides       = UnitTypeToSides(_entityManager.GetUnitType(i).Type);
+            ref var move       = ref _entityManager.GetMove(i);
+            float  rotation    = move.FacingAngle;
             Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
-            _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sr, borderColor);
+            _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
         }
 
         if (_isDragging)

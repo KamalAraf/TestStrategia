@@ -295,7 +295,7 @@ public partial class GameScreen
             int id2 = _entityManager.Create();
             if (id2 < 0)
             {
-                System.Console.WriteLine("ERROR: entity limit reached (2000 max).");
+                System.Console.WriteLine("ERROR: entity limit reached (100000 max).");
                 return;
             }
             _entityManager.GetPosition(id2) = new PositionComponent { X = x, Y = y };

@@ -4,7 +4,7 @@ namespace MedievalWarSim.Core.Managers;
 
 public class EntityManager
 {
-    private const int MAX_ENTITIES = 2000;
+    private const int MAX_ENTITIES = 100000;
 
     private readonly PositionComponent[] _positions;
     private readonly UnitTypeComponent[]  _unitTypes;

@@ -18,6 +18,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _graphics.PreferredBackBufferHeight = 720;
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
+        IsFixedTimeStep = false;
+        _graphics.SynchronizeWithVerticalRetrace = false;
         Window.Title = "MedievalWarSim";
     }
 

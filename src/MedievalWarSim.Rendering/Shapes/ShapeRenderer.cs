@@ -7,10 +7,13 @@ public class ShapeRenderer : IDisposable
 {
     private readonly Texture2D _fillTexture;
     private readonly Texture2D _borderTexture;
+    private readonly Dictionary<int, (Texture2D Fill, Texture2D Border)> _polyTextures = new();
     private readonly Texture2D _pixel;
     private const int TexRadius = 64;
     private const int TexDiameter = TexRadius * 2;
     private const float BorderPixels = 12f;
+
+    private static readonly int[] PolySides = { 3, 4, 5, 6, 8 };
 
     public ShapeRenderer(GraphicsDevice graphicsDevice)
     {
@@ -18,7 +21,58 @@ public class ShapeRenderer : IDisposable
         _borderTexture = CreateBorderTexture(graphicsDevice);
         _pixel = new Texture2D(graphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
+
+        foreach (int sides in PolySides)
+        {
+            var fill = CreatePolygonFillTexture(graphicsDevice, sides);
+            var border = CreatePolygonBorderTexture(graphicsDevice, sides);
+            _polyTextures[sides] = (fill, border);
+        }
     }
+
+    public void DrawShape(SpriteBatch spriteBatch, float x, float y, float radius, int sides, float rotation, Color? borderColor)
+    {
+        float scale = radius / TexRadius;
+        var origin = new Vector2(TexRadius, TexRadius);
+        var pos = new Vector2(x, y);
+
+        if (_polyTextures.TryGetValue(sides, out var pair))
+        {
+            spriteBatch.Draw(pair.Fill, pos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+            Color bColor = borderColor ?? Color.Black;
+            spriteBatch.Draw(pair.Border, pos, null, bColor, rotation, origin, scale, SpriteEffects.None, 0f);
+        }
+        else
+        {
+            DrawCircle(spriteBatch, x, y, radius, borderColor);
+        }
+    }
+
+    public void DrawCircle(SpriteBatch spriteBatch, float x, float y, float radius, Color? borderColor)
+    {
+        float scale = radius / TexRadius;
+        var origin = new Vector2(TexRadius, TexRadius);
+        var pos = new Vector2(x, y);
+
+        spriteBatch.Draw(_fillTexture, pos, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+
+        Color bColor = borderColor ?? Color.Black;
+        spriteBatch.Draw(_borderTexture, pos, null, bColor, 0f, origin, scale, SpriteEffects.None, 0f);
+    }
+
+    public void DrawRectangle(SpriteBatch spriteBatch, float x, float y, float w, float h, Color fillColor, Color borderColor, float borderWidth = 1f)
+    {
+        if (w <= 0 || h <= 0) return;
+
+        spriteBatch.Draw(_pixel, new Vector2(x, y), null, fillColor, 0f, Vector2.Zero, new Vector2(w, h), SpriteEffects.None, 0f);
+
+        spriteBatch.Draw(_pixel, new Vector2(x, y), null, borderColor, 0f, Vector2.Zero, new Vector2(w, borderWidth), SpriteEffects.None, 0f);
+        spriteBatch.Draw(_pixel, new Vector2(x, y + h - borderWidth), null, borderColor, 0f, Vector2.Zero, new Vector2(w, borderWidth), SpriteEffects.None, 0f);
+        spriteBatch.Draw(_pixel, new Vector2(x, y), null, borderColor, 0f, Vector2.Zero, new Vector2(borderWidth, h), SpriteEffects.None, 0f);
+        spriteBatch.Draw(_pixel, new Vector2(x + w - borderWidth, y), null, borderColor, 0f, Vector2.Zero, new Vector2(borderWidth, h), SpriteEffects.None, 0f);
+    }
+
+    // ---- Circle textures (existing) ----
 
     private static Texture2D CreateFillTexture(GraphicsDevice gd)
     {
@@ -102,34 +156,146 @@ public class ShapeRenderer : IDisposable
         return tex;
     }
 
-    public void DrawCircle(SpriteBatch spriteBatch, float x, float y, float radius, Color? borderColor)
+    // ---- Polygon textures ----
+
+    private static Texture2D CreatePolygonFillTexture(GraphicsDevice gd, int sides)
     {
-        float scale = radius / TexRadius;
-        var origin = new Vector2(TexRadius, TexRadius);
-        var pos = new Vector2(x, y);
+        int dia = TexDiameter;
+        int rad = TexRadius;
+        float fillR = rad - BorderPixels;
+        var verts = GenerateVertices(sides, fillR, rad, rad);
+        Color[] data = new Color[dia * dia];
 
-        spriteBatch.Draw(_fillTexture, pos, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+        for (int y = 0; y < dia; y++)
+        {
+            for (int x = 0; x < dia; x++)
+            {
+                if (!PointInPolygon(x, y, verts))
+                {
+                    data[y * dia + x] = Color.Transparent;
+                    continue;
+                }
 
-        Color bColor = borderColor ?? Color.Black;
-        spriteBatch.Draw(_borderTexture, pos, null, bColor, 0f, origin, scale, SpriteEffects.None, 0f);
+                float minDist = MinDistToEdge(x, y, verts);
+                if (minDist < 1.5f)
+                {
+                    int a = (int)((minDist / 1.5f) * 255);
+                    data[y * dia + x] = new Color(255, 255, 255, a);
+                }
+                else
+                {
+                    data[y * dia + x] = Color.White;
+                }
+            }
+        }
+
+        var tex = new Texture2D(gd, dia, dia);
+        tex.SetData(data);
+        return tex;
     }
 
-    public void DrawRectangle(SpriteBatch spriteBatch, float x, float y, float w, float h, Color fillColor, Color borderColor, float borderWidth = 1f)
+    private static Texture2D CreatePolygonBorderTexture(GraphicsDevice gd, int sides)
     {
-        if (w <= 0 || h <= 0) return;
+        int dia = TexDiameter;
+        int rad = TexRadius;
+        float innerR = rad - BorderPixels;
+        var innerVerts = GenerateVertices(sides, innerR, rad, rad);
+        var outerVerts = GenerateVertices(sides, rad, rad, rad);
+        Color[] data = new Color[dia * dia];
 
-        spriteBatch.Draw(_pixel, new Vector2(x, y), null, fillColor, 0f, Vector2.Zero, new Vector2(w, h), SpriteEffects.None, 0f);
+        for (int y = 0; y < dia; y++)
+        {
+            for (int x = 0; x < dia; x++)
+            {
+                bool insideOuter = PointInPolygon(x, y, outerVerts);
+                bool insideInner = PointInPolygon(x, y, innerVerts);
 
-        spriteBatch.Draw(_pixel, new Vector2(x, y), null, borderColor, 0f, Vector2.Zero, new Vector2(w, borderWidth), SpriteEffects.None, 0f);
-        spriteBatch.Draw(_pixel, new Vector2(x, y + h - borderWidth), null, borderColor, 0f, Vector2.Zero, new Vector2(w, borderWidth), SpriteEffects.None, 0f);
-        spriteBatch.Draw(_pixel, new Vector2(x, y), null, borderColor, 0f, Vector2.Zero, new Vector2(borderWidth, h), SpriteEffects.None, 0f);
-        spriteBatch.Draw(_pixel, new Vector2(x + w - borderWidth, y), null, borderColor, 0f, Vector2.Zero, new Vector2(borderWidth, h), SpriteEffects.None, 0f);
+                if (insideOuter && !insideInner)
+                {
+                    float distToInner = MinDistToEdge(x, y, innerVerts);
+                    float distToOuter = MinDistToEdge(x, y, outerVerts);
+                    float minDist = Math.Min(distToInner, distToOuter);
+
+                    if (minDist < 1.5f)
+                    {
+                        int a = (int)((1f - minDist / 1.5f) * 255);
+                        data[y * dia + x] = new Color(255, 255, 255, a);
+                    }
+                    else
+                    {
+                        data[y * dia + x] = Color.White;
+                    }
+                }
+                else
+                {
+                    data[y * dia + x] = Color.Transparent;
+                }
+            }
+        }
+
+        var tex = new Texture2D(gd, dia, dia);
+        tex.SetData(data);
+        return tex;
+    }
+
+    private static Vector2[] GenerateVertices(int sides, float radius, float cx, float cy)
+    {
+        var verts = new Vector2[sides];
+        for (int i = 0; i < sides; i++)
+        {
+            float angle = -MathF.PI / 2f + i * (MathF.PI * 2f / sides);
+            verts[i] = new Vector2(cx + MathF.Cos(angle) * radius, cy + MathF.Sin(angle) * radius);
+        }
+        return verts;
+    }
+
+    private static bool PointInPolygon(float px, float py, Vector2[] verts)
+    {
+        bool inside = false;
+        int n = verts.Length;
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            if ((verts[i].Y > py) != (verts[j].Y > py) &&
+                px < (verts[j].X - verts[i].X) * (py - verts[i].Y) / (verts[j].Y - verts[i].Y) + verts[i].X)
+                inside = !inside;
+        }
+        return inside;
+    }
+
+    private static float DistToSegment(float px, float py, Vector2 a, Vector2 b)
+    {
+        float dx = b.X - a.X;
+        float dy = b.Y - a.Y;
+        float lengthSq = dx * dx + dy * dy;
+        if (lengthSq < 1e-10f)
+            return MathF.Sqrt((px - a.X) * (px - a.X) + (py - a.Y) * (py - a.Y));
+        float t = Math.Clamp(((px - a.X) * dx + (py - a.Y) * dy) / lengthSq, 0f, 1f);
+        float cx = a.X + t * dx;
+        float cy = a.Y + t * dy;
+        return MathF.Sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
+    }
+
+    private static float MinDistToEdge(float px, float py, Vector2[] verts)
+    {
+        float minDist = float.MaxValue;
+        int n = verts.Length;
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            float d = DistToSegment(px, py, verts[j], verts[i]);
+            if (d < minDist) minDist = d;
+        }
+        return minDist;
     }
 
     public void Dispose()
     {
         _fillTexture.Dispose();
         _borderTexture.Dispose();
+        foreach (var pair in _polyTextures.Values)
+        {
+            pair.Fill.Dispose();
+            pair.Border.Dispose();
+        }
         _pixel.Dispose();
     }
 }
