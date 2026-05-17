@@ -72,9 +72,9 @@ public class ShapeRenderer : IDisposable
 
     public void DrawCircleBorder(SpriteBatch spriteBatch, float cx, float cy, float radius, float thickness, Color color)
     {
-        int segments = (int)(MathF.PI * MathF.Sqrt(radius) * 2f);
+        int segments = (int)(MathF.PI * radius / 3f);
         if (segments < 16) segments = 16;
-        if (segments > 128) segments = 128;
+        if (segments > 360) segments = 360;
 
         float angleStep = MathF.PI * 2f / segments;
         for (int i = 0; i < segments; i++)
@@ -93,7 +93,7 @@ public class ShapeRenderer : IDisposable
             float angle = MathF.Atan2(dy, dx);
 
             spriteBatch.Draw(_pixel, new Vector2(x1, y1), null, color, angle,
-                Vector2.Zero, new Vector2(len, thickness), SpriteEffects.None, 0f);
+                Vector2.Zero, new Vector2(len + thickness, thickness), SpriteEffects.None, 0f);
         }
     }
 

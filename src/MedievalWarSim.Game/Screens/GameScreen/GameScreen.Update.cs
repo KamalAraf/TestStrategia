@@ -264,7 +264,7 @@ public partial class GameScreen
             }
 
             _graphicsDevice.SetRenderTarget(_fogRT);
-            _graphicsDevice.Clear(new Color(0, 0, 0, 255)); // black = full fog
+            _graphicsDevice.Clear(new Color(100, 100, 100, 255)); // dark grey = fog
 
             spriteBatch.Begin();
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
