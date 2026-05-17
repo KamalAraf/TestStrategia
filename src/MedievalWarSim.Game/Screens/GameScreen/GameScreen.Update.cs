@@ -254,48 +254,57 @@ public partial class GameScreen
     {
         if (_visionMode != VisionMode.None)
         {
-            // ---- 1. Build persistent fog mask on RT ----
-            // Values: 255=visible ora, ~255→0=esplorato (decade), 0=mai visto
             int w = _viewport.Width, h = _viewport.Height;
-            if (_fogRT == null || _fogW != w || _fogH != h)
+
+            // Ensure RTs match viewport
+            if (_rtVision == null || _rtW != w || _rtH != h)
             {
-                _fogRT?.Dispose();
-                _fogRT = new RenderTarget2D(_graphicsDevice, w, h);
-                _fogW = w; _fogH = h;
-                _graphicsDevice.SetRenderTarget(_fogRT);
-                _graphicsDevice.Clear(Color.Black); // init: tutto inesplorato
+                _rtVision?.Dispose(); _rtExplored?.Dispose(); _rtFog?.Dispose();
+                _rtVision  = new RenderTarget2D(_graphicsDevice, w, h);
+                _rtExplored = new RenderTarget2D(_graphicsDevice, w, h);
+                _rtFog      = new RenderTarget2D(_graphicsDevice, w, h);
+                _rtW = w; _rtH = h;
+                _graphicsDevice.SetRenderTarget(_rtExplored);
+                _graphicsDevice.Clear(Color.Black); // init: mai visto
                 _graphicsDevice.SetRenderTarget(null);
             }
 
-            _graphicsDevice.SetRenderTarget(_fogRT);
-
+            // ---- 1. RT_v: current vision (white circles on black) ----
+            _graphicsDevice.SetRenderTarget(_rtVision);
+            _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
-            // Dim tutta l'area esplorata (decade ~2%/frame → memoria ~1-2s)
-            _shapeRenderer.DrawRectangle(spriteBatch, 0, 0, w, h,
-                new Color(0, 0, 0, 5), Color.Transparent, 0f);
-
-            // White circles = currently visible → reset a 255
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
                 if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
-
                 var  pos   = _entityManager.GetPosition(i);
                 var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
                 float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
                 if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
-                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin)
-                    continue;
-
+                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
                 _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
                     Color.White, Color.Transparent);
             }
             spriteBatch.End();
 
-            // ---- 2. Draw units onto backbuffer ----
+            // ---- 2. RT_e: accumulate explored (grey) from current vision ----
+            // Draw RT_v with tint (100,100,100): where alpha > 0, set to grey
+            _graphicsDevice.SetRenderTarget(_rtExplored);
+            spriteBatch.Begin();
+            spriteBatch.Draw(_rtVision, Vector2.Zero, new Color(100, 100, 100, 255));
+            spriteBatch.End();
+
+            // ---- 3. RT_f: combine — explored (grey) + vision overwrites to white ----
+            _graphicsDevice.SetRenderTarget(_rtFog);
+            _graphicsDevice.Clear(Color.Black);
+            spriteBatch.Begin();
+            spriteBatch.Draw(_rtExplored, Vector2.Zero, Color.White);
+            spriteBatch.Draw(_rtVision, Vector2.Zero, Color.White);
+            spriteBatch.End();
+
+            // ---- 4. Draw units onto backbuffer ----
             _graphicsDevice.SetRenderTarget(null);
             _graphicsDevice.Clear(new Color(30, 30, 30));
-
             spriteBatch.Begin();
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
@@ -306,22 +315,17 @@ public partial class GameScreen
                 float  radius   = GetUnitRadius(type);
                 float  sr       = radius * _camera.Zoom;
                 if (sx + sr < -DrawMargin || sx - sr > w + DrawMargin ||
-                    sy + sr < -DrawMargin || sy - sr > h + DrawMargin)
-                    continue;
-
-                int    sides       = UnitTypeToSides(type);
-                ref var move       = ref _entityManager.GetMove(i);
-                float  rotation    = move.FacingAngle;
+                    sy + sr < -DrawMargin || sy - sr > h + DrawMargin) continue;
+                int    sides    = UnitTypeToSides(type);
+                ref var move    = ref _entityManager.GetMove(i);
+                float  rotation = move.FacingAngle;
                 Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
                 _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
-
                 var hp = _entityManager.GetHealth(i);
                 if (hp.CurrentHP < hp.MaxHP && sr > 4f)
                 {
-                    float barW = sr * 2f * 0.85f;
-                    float barH = 3f;
-                    float barX = sx - barW / 2f;
-                    float barY = sy - sr - barH - 2f;
+                    float barW = sr * 2f * 0.85f, barH = 3f;
+                    float barX = sx - barW / 2f, barY = sy - sr - barH - 2f;
                     float ratio = hp.CurrentHP / hp.MaxHP;
                     Color barColor = ratio > 0.6f ? Color.Lime : ratio > 0.3f ? Color.Yellow : Color.Red;
                     _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW, barH, new Color(30, 30, 30, 180), Color.White * 0.4f, 0.5f);
@@ -330,11 +334,9 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 3. Apply fog mask with multiply blend ----
-            // Where RT is black (0): backbuffer * 0 → black (fog)
-            // Where RT is white (1): backbuffer * 1 → unchanged (revealed)
+            // ---- 5. Apply fog multiply: white=visibile, grey=esplorato, black=inesplorato ----
             spriteBatch.Begin(SpriteSortMode.Deferred, FogBlend);
-            spriteBatch.Draw(_fogRT, Vector2.Zero, Color.White);
+            spriteBatch.Draw(_rtFog, Vector2.Zero, Color.White);
             spriteBatch.End();
 
             // ---- 4. UI overlay ----
