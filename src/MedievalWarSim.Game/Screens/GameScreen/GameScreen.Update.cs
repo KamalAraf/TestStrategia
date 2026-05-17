@@ -256,7 +256,7 @@ public partial class GameScreen
         {
             int w = _viewport.Width, h = _viewport.Height;
 
-            // Ensure RTs match viewport size
+            // Ensure _rtFinal matches viewport
             if (_rtFinal == null || _rtW != w || _rtH != h)
             {
                 _rtFinal?.Dispose();
@@ -264,42 +264,53 @@ public partial class GameScreen
                 _rtW = w; _rtH = h;
             }
 
-            // Create world-space fog RT once (never cleared — accumulates explored)
-            if (_worldFogRT == null)
-            {
-                _worldFogRT = new RenderTarget2D(_graphicsDevice, WorldFogSize, WorldFogSize,
-                    false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-                _graphicsDevice.SetRenderTarget(_worldFogRT);
-                _graphicsDevice.Clear(Color.Black);
-                _graphicsDevice.SetRenderTarget(null);
-            }
-
-            // ---- A. Accumulate explored (white circles) on world-space fog RT ----
-            _graphicsDevice.SetRenderTarget(_worldFogRT);
-            spriteBatch.Begin();
+            // ---- A. Accumulate explored circles (CPU, deduplicated per unit) ----
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
                 if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
-                var  pos   = _entityManager.GetPosition(i);
+                var pos = _entityManager.GetPosition(i);
                 float sight = _entityManager.GetVision(i).SightRange;
-                float tx = pos.X / WorldFogScale;
-                float ty = pos.Y / WorldFogScale;
-                float tr = sight / WorldFogScale;
-                _shapeRenderer.DrawFilledCircle(spriteBatch, tx, ty, tr, Color.White, Color.Transparent);
+
+                float dx = pos.X - _lastExploredX[i];
+                float dy = pos.Y - _lastExploredY[i];
+                if (dx * dx + dy * dy > MinExploreDist * MinExploreDist)
+                {
+                    _exploredCircles.Add((pos.X, pos.Y, sight));
+                    _lastExploredX[i] = pos.X;
+                    _lastExploredY[i] = pos.Y;
+                }
             }
-            spriteBatch.End();
 
             // ---- B. Build final fog mask on _rtFinal ----
             _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
-            Matrix viewMatrix = Matrix.CreateScale(WorldFogScale * _camera.Zoom) *
-                                Matrix.CreateTranslation(-_camera.X * _camera.Zoom,
-                                                          -_camera.Y * _camera.Zoom, 0);
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, null, null, null, null, viewMatrix);
-            spriteBatch.Draw(_worldFogRT, Vector2.Zero, new Color(180, 180, 180));
+
+            // Viewport bounds in world coords (for culling)
+            float invZ = 1f / _camera.Zoom;
+            float viewLeft   = _camera.X;
+            float viewRight  = _camera.X + w * invZ;
+            float viewTop    = _camera.Y;
+            float viewBottom = _camera.Y + h * invZ;
+            float drawMarginWorld = DrawMargin * invZ;
+
+            // Draw explored circles (grey)
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque);
+            foreach (var (wx, wy, radius) in _exploredCircles)
+            {
+                if (wx + radius < viewLeft  - drawMarginWorld ||
+                    wx - radius > viewRight + drawMarginWorld ||
+                    wy + radius < viewTop   - drawMarginWorld ||
+                    wy - radius > viewBottom + drawMarginWorld) continue;
+                float sx = (wx - _camera.X) * _camera.Zoom;
+                float sy = (wy - _camera.Y) * _camera.Zoom;
+                float sr = radius * _camera.Zoom;
+                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sr, new Color(180, 180, 180), Color.Transparent);
+            }
             spriteBatch.End();
-            spriteBatch.Begin();
+
+            // Draw current vision circles (white)
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;

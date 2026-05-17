@@ -43,10 +43,12 @@ public partial class GameScreen : IDisposable
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
-    private const int WorldFogSize = 4096;
-    private const float WorldFogScale = 2f;
+    private const float MinExploreDist = 50f;
+    private const int MaxEntities = 100000;
     private RenderTarget2D? _rtFinal;
-    private RenderTarget2D? _worldFogRT;
+    private readonly List<(float wx, float wy, float radius)> _exploredCircles = new();
+    private readonly float[] _lastExploredX = new float[MaxEntities];
+    private readonly float[] _lastExploredY = new float[MaxEntities];
     private int _rtW, _rtH;
     private static readonly BlendState FogBlend = new()
     {
@@ -108,6 +110,5 @@ public partial class GameScreen : IDisposable
     {
         _shapeRenderer.Dispose();
         _rtFinal?.Dispose();
-        _worldFogRT?.Dispose();
     }
 }
