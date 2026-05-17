@@ -108,6 +108,19 @@ public partial class GameScreen
             float  rotation    = move.FacingAngle;
             Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
             _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
+
+            var hp = _entityManager.GetHealth(i);
+            if (hp.CurrentHP < hp.MaxHP && sr > 4f)
+            {
+                float barW = sr * 2f * 0.85f;
+                float barH = 3f;
+                float barX = sx - barW / 2f;
+                float barY = sy - sr - barH - 2f;
+                float ratio = hp.CurrentHP / hp.MaxHP;
+                Color barColor = ratio > 0.6f ? Color.Lime : ratio > 0.3f ? Color.Yellow : Color.Red;
+                _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW, barH, new Color(30, 30, 30, 180), Color.White * 0.4f, 0.5f);
+                _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW * ratio, barH, barColor, Color.Transparent, 0f);
+            }
         }
 
         if (_isDragging)
@@ -136,12 +149,14 @@ public partial class GameScreen
         var pos  = _entityManager.GetPosition(id);
         var type = _entityManager.GetUnitType(id);
         var move = _entityManager.GetMove(id);
+        var hp   = _entityManager.GetHealth(id);
         System.Console.WriteLine($"Unit {id}:");
         System.Console.WriteLine($"  Type:     {type.Type}");
         System.Console.Write($"  Position: ({pos.X:F1};{pos.Y:F1})");
         if (move.IsMoving)
             System.Console.Write($" -> ({move.TargetX:F1};{move.TargetY:F1})");
         System.Console.WriteLine();
+        System.Console.WriteLine($"  HP:       {hp.CurrentHP:F1}/{hp.MaxHP:F1}");
         System.Console.WriteLine($"  Speed:    {move.Speed:F1}");
         System.Console.WriteLine($"  Selected: {_selectedUnitIds.Contains(id)}");
         System.Console.WriteLine($"  Moving:   {move.IsMoving}");

@@ -990,3 +990,12 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **`create <type> <x> <y>`**: crea unità di tipo specifico (per nome o ID). Es: `create cavalry 500 300`, `create 3 100 200`.
 - **Per-type radius**: `UnitStats.BaseRadius`. Infantry/Cavalry=16, Archer/Medic=14, Ballista=20 (1.25×). Click detection e culling usano il raggio dell'unità.
 - **Even-sided polygon offset**: poligoni con lati pari (4, 6, 8) ruotati di `π/sides` — lato piatto davanti invece di vertice.
+- **HealthComponent**: MaxHP, CurrentHP. Per-type BaseHP + RollHP ±5%. Morte quando HP ≤ 0 → Destroy.
+- **`health <id|all> add|remove|set <amount>`**: comando per manipolare HP.
+- **Health bar**: barra 3px sopra ogni unità danneggiata (larghezza 0.85× diametro). Sfondo scuro + bordo bianco sempre visibile, fill verde/giallo/rosso.
+- **UnitStats ottimizzato**: `Dictionary<UnitType, ...>` → array `_stats[(int)type]`. `UnitStatData` da `record` class a `record struct`.
+- **`set` rimosso**, rimpiazzato da comandi separati:
+  - `speed <id|all> set <val> | random`
+  - `type <id|all> set <typename|id> | random`
+  - `select <id> | all` / `deselect <id> | all`
+- **`info` stampa HP**: mostra `HP: current/max`.

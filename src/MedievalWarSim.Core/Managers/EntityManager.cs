@@ -9,7 +9,8 @@ public class EntityManager
     private readonly PositionComponent[] _positions;
     private readonly UnitTypeComponent[]  _unitTypes;
     private readonly MoveComponent[] _moves;
-    private readonly bool[]               _alive;
+    private readonly HealthComponent[] _health;
+    private readonly bool[]           _alive;
 
     private readonly Stack<int> _freeSlots = new();
     private int _nextNew = 0;
@@ -20,6 +21,7 @@ public class EntityManager
         _positions = new PositionComponent[MAX_ENTITIES];
         _unitTypes = new UnitTypeComponent[MAX_ENTITIES];
         _moves = new MoveComponent[MAX_ENTITIES];
+        _health = new HealthComponent[MAX_ENTITIES];
         _alive     = new bool[MAX_ENTITIES];
     }
 
@@ -69,6 +71,13 @@ public class EntityManager
         if ((uint)entityId >= (uint)MAX_ENTITIES)
             throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
         return ref _moves[entityId];
+    }
+
+    public ref HealthComponent GetHealth(int entityId)
+    {
+        if ((uint)entityId >= (uint)MAX_ENTITIES)
+            throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
+        return ref _health[entityId];
     }
 
     public bool IsAlive(int entityId)

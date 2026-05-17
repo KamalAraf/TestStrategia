@@ -52,137 +52,6 @@ public partial class GameScreen
             }
         });
 
-        _console.RegisterCommand("set", args =>
-        {
-            if (args.Length < 2)
-            {
-                System.Console.WriteLine("Usage: set <id|all> <property> <value>");
-                System.Console.WriteLine("  Properties: type, selected, speed");
-                return;
-            }
-
-            string idArg    = args[0].ToLowerInvariant();
-            string property = args[1].ToLowerInvariant();
-
-            if (idArg == "all" && property == "selected" && args.Length >= 3)
-            {
-                string selArg = args[2].ToLowerInvariant();
-                if (selArg == "true" || selArg == "1")
-                {
-                    _selectedUnitIds.Clear();
-                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
-                        if (_entityManager.IsAlive(i))
-                            _selectedUnitIds.Add(i);
-                    System.Console.WriteLine($"Selected all {_selectedUnitIds.Count} unit(s).");
-                }
-                else if (selArg == "false" || selArg == "0")
-                {
-                    _selectedUnitIds.Clear();
-                    System.Console.WriteLine("Deselected all units.");
-                }
-                else
-                {
-                    System.Console.WriteLine("Usage: set all selected true|false");
-                }
-                return;
-            }
-
-            if (!int.TryParse(args[0], out int id))
-            {
-                System.Console.WriteLine($"Invalid id: {args[0]}");
-                return;
-            }
-
-            if (!_entityManager.IsAlive(id))
-            {
-                System.Console.WriteLine($"Unit {id} does not exist.");
-                return;
-            }
-
-            switch (property)
-            {
-                case "type":
-                    if (args.Length < 3)
-                    {
-                        System.Console.WriteLine("Usage: set <id> type <typename|id>");
-                        return;
-                    }
-                    UnitType newType;
-                    if (int.TryParse(args[2], out int typeInt))
-                    {
-                        if (Enum.IsDefined(typeof(UnitType), typeInt))
-                            newType = (UnitType)typeInt;
-                        else
-                        {
-                            System.Console.WriteLine($"Invalid type value: {typeInt}. Valid: 0=Infantry, 1=Archer, 2=Cavalry, 3=Ballista, 4=Medic");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        if (!Enum.TryParse(args[2], true, out newType))
-                        {
-                            System.Console.WriteLine($"Invalid type name: {args[2]}. Valid: Infantry, Archer, Cavalry, Ballista, Medic");
-                            return;
-                        }
-                    }
-                    _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = newType };
-                    _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(newType);
-                    System.Console.WriteLine($"Unit {id} type set to {newType}.");
-                    break;
-
-                case "selected":
-                    if (args.Length < 3)
-                    {
-                        System.Console.WriteLine("Usage: set <id> selected true/false");
-                        return;
-                    }
-                    string selArg = args[2].ToLowerInvariant();
-                    if (selArg == "true" || selArg == "1")
-                    {
-                        _selectedUnitIds.Add(id);
-                        System.Console.WriteLine($"Unit {id} selected.");
-                    }
-                    else if (selArg == "false" || selArg == "0")
-                    {
-                        _selectedUnitIds.Remove(id);
-                        System.Console.WriteLine($"Unit {id} deselected.");
-                    }
-                    else
-                    {
-                        System.Console.WriteLine("Usage: set <id> selected true/false");
-                    }
-                    break;
-
-                case "speed":
-                    if (args.Length < 3)
-                    {
-                        System.Console.WriteLine("Usage: set <id> speed <value|default>");
-                        return;
-                    }
-                    if (args[2].ToLowerInvariant() == "default")
-                    {
-                        var unitType = _entityManager.GetUnitType(id).Type;
-                        _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(unitType);
-                        System.Console.WriteLine($"Unit {id} speed reset to default ({_entityManager.GetMove(id).Speed:F1}).");
-                    }
-                    else if (float.TryParse(args[2], out float speedVal))
-                    {
-                        _entityManager.GetMove(id).Speed = speedVal;
-                        System.Console.WriteLine($"Unit {id} speed set to {speedVal}.");
-                    }
-                    else
-                    {
-                        System.Console.WriteLine("Usage: set <id> speed <value|default>");
-                    }
-                    break;
-
-                default:
-                    System.Console.WriteLine($"Unknown property: {property}. Available: type, selected, speed");
-                    break;
-            }
-        });
-
         _console.RegisterCommand("info", args =>
         {
             if (args.Length == 0)
@@ -241,6 +110,63 @@ public partial class GameScreen
             }
         });
 
+        _console.RegisterCommand("select", args =>
+        {
+            if (args.Length == 0)
+            {
+                System.Console.WriteLine("Usage: select <id> | all");
+                return;
+            }
+
+            if (args[0] == "all")
+            {
+                _selectedUnitIds.Clear();
+                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    if (_entityManager.IsAlive(i))
+                        _selectedUnitIds.Add(i);
+                System.Console.WriteLine($"Selected {_selectedUnitIds.Count} unit(s).");
+                return;
+            }
+
+            if (int.TryParse(args[0], out int id) && _entityManager.IsAlive(id))
+            {
+                _selectedUnitIds.Add(id);
+                System.Console.WriteLine($"Selected unit {id}.");
+            }
+            else
+            {
+                System.Console.WriteLine($"Unit {args[0]} does not exist.");
+            }
+        });
+
+        _console.RegisterCommand("deselect", args =>
+        {
+            if (args.Length == 0)
+            {
+                System.Console.WriteLine("Usage: deselect <id> | all");
+                return;
+            }
+
+            if (args[0] == "all")
+            {
+                _selectedUnitIds.Clear();
+                System.Console.WriteLine("Deselected all units.");
+                return;
+            }
+
+            if (int.TryParse(args[0], out int id))
+            {
+                if (_selectedUnitIds.Remove(id))
+                    System.Console.WriteLine($"Deselected unit {id}.");
+                else
+                    System.Console.WriteLine($"Unit {id} was not selected.");
+            }
+            else
+            {
+                System.Console.WriteLine($"Invalid id: {args[0]}");
+            }
+        });
+
         _console.RegisterCommand("create", args =>
         {
             if (args.Length == 0)
@@ -272,6 +198,8 @@ public partial class GameScreen
                     var rt = (UnitType)Random.Shared.Next(5);
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = rt };
                     _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(rt);
+                    float rhp = UnitStats.RollHP(rt);
+                    _entityManager.GetHealth(id) = new HealthComponent { MaxHP = rhp, CurrentHP = rhp };
                     created++;
                 }
 
@@ -316,6 +244,8 @@ public partial class GameScreen
             _entityManager.GetPosition(newId) = new PositionComponent { X = cx, Y = cy };
             _entityManager.GetUnitType(newId) = new UnitTypeComponent { Type = parsedType };
             _entityManager.GetMove(newId).Speed = UnitStats.RollSpeed(parsedType);
+            float hp2 = UnitStats.RollHP(parsedType);
+            _entityManager.GetHealth(newId) = new HealthComponent { MaxHP = hp2, CurrentHP = hp2 };
             System.Console.WriteLine($"Created {parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
         });
 
@@ -398,6 +328,247 @@ public partial class GameScreen
             mv.TargetY = my;
             mv.IsMoving = true;
             System.Console.WriteLine($"Unit {moveId} moving to ({mx:F0}, {my:F0}).");
+        });
+
+        _console.RegisterCommand("type", args =>
+        {
+            if (args.Length < 3 && !(args.Length == 2 && args[1] == "random"))
+            {
+                System.Console.WriteLine("Usage: type <id|all> set <typename|id> | type <id|all> random");
+                return;
+            }
+
+            string targetArg = args[0].ToLowerInvariant();
+            string op = args[1].ToLowerInvariant();
+
+            UnitType? ResolveType(string val)
+            {
+                if (int.TryParse(val, out int ti))
+                {
+                    if (Enum.IsDefined(typeof(UnitType), ti))
+                        return (UnitType)ti;
+                    System.Console.WriteLine($"Invalid type id: {ti}. Valid: 0=Infantry..4=Medic");
+                    return null;
+                }
+                if (Enum.TryParse(val, true, out UnitType parsed))
+                    return parsed;
+                System.Console.WriteLine($"Unknown type: {val}. Valid: Infantry, Archer, Cavalry, Ballista, Medic");
+                return null;
+            }
+
+            void ApplyType(int eid, UnitType t)
+            {
+                _entityManager.GetUnitType(eid) = new UnitTypeComponent { Type = t };
+                _entityManager.GetMove(eid).Speed = UnitStats.RollSpeed(t);
+                float hp = UnitStats.RollHP(t);
+                _entityManager.GetHealth(eid) = new HealthComponent { MaxHP = hp, CurrentHP = hp };
+            }
+
+            if (op == "random")
+            {
+                var rt = (UnitType)Random.Shared.Next(5);
+                if (targetArg == "all")
+                {
+                    int count = 0;
+                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    {
+                        if (!_entityManager.IsAlive(i)) continue;
+                        ApplyType(i, (UnitType)Random.Shared.Next(5));
+                        count++;
+                    }
+                    System.Console.WriteLine($"Randomized type for {count} unit(s).");
+                }
+                else if (int.TryParse(args[0], out int eid) && _entityManager.IsAlive(eid))
+                {
+                    ApplyType(eid, rt);
+                    System.Console.WriteLine($"Unit {eid} type set to {rt} (random).");
+                }
+                else
+                {
+                    System.Console.WriteLine($"Unit {args[0]} does not exist.");
+                }
+                return;
+            }
+
+            if (op != "set" || args.Length < 3)
+            {
+                System.Console.WriteLine("Usage: type <id|all> set <typename|id> | type <id|all> random");
+                return;
+            }
+
+            var newType = ResolveType(args[2]);
+            if (newType == null) return;
+
+            if (targetArg == "all")
+            {
+                int count = 0;
+                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                {
+                    if (!_entityManager.IsAlive(i)) continue;
+                    ApplyType(i, newType.Value);
+                    count++;
+                }
+                System.Console.WriteLine($"Set all {count} unit(s) type to {newType.Value}.");
+            }
+            else if (int.TryParse(args[0], out int eid2))
+            {
+                if (!_entityManager.IsAlive(eid2))
+                {
+                    System.Console.WriteLine($"Unit {eid2} does not exist.");
+                    return;
+                }
+                ApplyType(eid2, newType.Value);
+                System.Console.WriteLine($"Unit {eid2} type set to {newType.Value}.");
+            }
+            else
+            {
+                System.Console.WriteLine("Usage: type <id|all> set <typename|id> | type <id|all> random");
+            }
+        });
+
+        _console.RegisterCommand("speed", args =>
+        {
+            if (args.Length < 3 && !(args.Length == 2 && args[1] == "random"))
+            {
+                System.Console.WriteLine("Usage: speed <id|all> set <value> | speed <id|all> random");
+                return;
+            }
+
+            string targetArg = args[0].ToLowerInvariant();
+            string op = args[1].ToLowerInvariant();
+
+            if (op == "random")
+            {
+                if (targetArg == "all")
+                {
+                    int count = 0;
+                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    {
+                        if (!_entityManager.IsAlive(i)) continue;
+                        var ut = _entityManager.GetUnitType(i).Type;
+                        _entityManager.GetMove(i).Speed = UnitStats.RollSpeed(ut);
+                        count++;
+                    }
+                    System.Console.WriteLine($"Randomized speed for {count} unit(s).");
+                }
+                else if (int.TryParse(args[0], out int eid) && _entityManager.IsAlive(eid))
+                {
+                    var ut = _entityManager.GetUnitType(eid).Type;
+                    _entityManager.GetMove(eid).Speed = UnitStats.RollSpeed(ut);
+                    System.Console.WriteLine($"Unit {eid} speed randomized to {_entityManager.GetMove(eid).Speed:F1}.");
+                }
+                else
+                {
+                    System.Console.WriteLine($"Unit {args[0]} does not exist.");
+                }
+                return;
+            }
+
+            if (op != "set" || args.Length < 3 || !float.TryParse(args[2], out float val))
+            {
+                System.Console.WriteLine("Usage: speed <id|all> set <value> | speed <id|all> random");
+                return;
+            }
+
+            if (targetArg == "all")
+            {
+                int count = 0;
+                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                {
+                    if (!_entityManager.IsAlive(i)) continue;
+                    _entityManager.GetMove(i).Speed = val;
+                    count++;
+                }
+                System.Console.WriteLine($"Set all {count} unit(s) speed to {val}.");
+            }
+            else if (int.TryParse(args[0], out int eid2))
+            {
+                if (!_entityManager.IsAlive(eid2))
+                {
+                    System.Console.WriteLine($"Unit {eid2} does not exist.");
+                    return;
+                }
+                _entityManager.GetMove(eid2).Speed = val;
+                System.Console.WriteLine($"Unit {eid2} speed set to {val}.");
+            }
+            else
+            {
+                System.Console.WriteLine("Usage: speed <id|all> set <value> | speed <id|all> random");
+            }
+        });
+
+        _console.RegisterCommand("health", args =>
+        {
+            if (args.Length < 3)
+            {
+                System.Console.WriteLine("Usage: health <id|all> add|remove|set <amount>");
+                return;
+            }
+
+            string targetArg = args[0].ToLowerInvariant();
+            string op = args[1].ToLowerInvariant();
+            if (!float.TryParse(args[2], out float amount))
+            {
+                System.Console.WriteLine("Invalid amount.");
+                return;
+            }
+
+            void ApplyHealth(int eid, float val, string o)
+            {
+                ref var h = ref _entityManager.GetHealth(eid);
+                switch (o)
+                {
+                    case "add":
+                        h.CurrentHP = Math.Min(h.MaxHP, h.CurrentHP + val);
+                        break;
+                    case "remove":
+                        h.CurrentHP -= val;
+                        if (h.CurrentHP <= 0f)
+                        {
+                            h.CurrentHP = 0f;
+                            _entityManager.Destroy(eid);
+                            _selectedUnitIds.Remove(eid);
+                            System.Console.WriteLine($"Unit {eid} died.");
+                        }
+                        break;
+                    case "set":
+                        h.CurrentHP = Math.Clamp(val, 0f, h.MaxHP);
+                        if (h.CurrentHP <= 0f)
+                        {
+                            _entityManager.Destroy(eid);
+                            _selectedUnitIds.Remove(eid);
+                            System.Console.WriteLine($"Unit {eid} died.");
+                        }
+                        break;
+                }
+            }
+
+            if (targetArg == "all")
+            {
+                int count = 0;
+                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                {
+                    if (!_entityManager.IsAlive(i)) continue;
+                    ApplyHealth(i, amount, op);
+                    count++;
+                }
+                System.Console.WriteLine($"Applied health {op} {amount} to {count} unit(s).");
+            }
+            else if (int.TryParse(args[0], out int eid))
+            {
+                if (!_entityManager.IsAlive(eid))
+                {
+                    System.Console.WriteLine($"Unit {eid} does not exist.");
+                    return;
+                }
+                ApplyHealth(eid, amount, op);
+                var h = _entityManager.GetHealth(eid);
+                System.Console.WriteLine($"Unit {eid} health: {h.CurrentHP:F1}/{h.MaxHP:F1}");
+            }
+            else
+            {
+                System.Console.WriteLine("Usage: health <id|all> add|remove|set <amount>");
+            }
         });
 
         _console.RegisterCommand("zoom", _ =>

@@ -73,6 +73,8 @@ public partial class GameScreen : IDisposable
         var rt = (UnitType)Random.Shared.Next(5);
         _entityManager.GetUnitType(0) = new UnitTypeComponent { Type = rt };
         _entityManager.GetMove(0).Speed = UnitStats.RollSpeed(rt);
+        float hp = UnitStats.RollHP(rt);
+        _entityManager.GetHealth(0) = new HealthComponent { MaxHP = hp, CurrentHP = hp };
 
         RegisterCommands();
     }
