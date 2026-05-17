@@ -171,32 +171,14 @@ public partial class GameScreen
         {
             if (args.Length == 0)
             {
-                System.Console.WriteLine("Usage: create random [count] | create [enemy] <type> <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] | create <type> <x> <y>");
                 return;
             }
 
-            int teamId = 0;
-            int argOff = 0;
-            if (args[0] == "enemy")
+            if (args[0] == "random")
             {
-                teamId = 1;
-                argOff = 1;
-                if (args.Length < 2)
-                {
-                    System.Console.WriteLine("Usage: create enemy <type> <x> <y>");
-                    return;
-                }
-            }
-
-            if (args[argOff] == "random")
-            {
-                if (teamId != 0)
-                {
-                    System.Console.WriteLine("Usage: create random [count] (enemy not supported with random)");
-                    return;
-                }
                 int count = 1;
-                if (args.Length >= argOff + 2 && (!int.TryParse(args[argOff + 1], out count) || count < 1))
+                if (args.Length >= 2 && (!int.TryParse(args[1], out count) || count < 1))
                 {
                     System.Console.WriteLine("Invalid count. Usage: create random [count]");
                     return;
@@ -215,7 +197,6 @@ public partial class GameScreen
                     _entityManager.GetPosition(id) = new PositionComponent { X = rx, Y = ry };
                     var rt = (UnitType)Random.Shared.Next(5);
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = rt };
-                    _entityManager.GetTeam(id).TeamId = 0;
                     _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(rt);
                     _entityManager.GetVision(id).SightRange = UnitStats.RollSightRange(rt);
                     float rhp = UnitStats.RollHP(rt);
@@ -228,8 +209,7 @@ public partial class GameScreen
             }
 
             UnitType parsedType;
-            string typeArg = args[argOff];
-            if (int.TryParse(typeArg, out int typeInt))
+            if (int.TryParse(args[0], out int typeInt))
             {
                 if (!Enum.IsDefined(typeof(UnitType), typeInt))
                 {
@@ -238,19 +218,19 @@ public partial class GameScreen
                 }
                 parsedType = (UnitType)typeInt;
             }
-            else if (!Enum.TryParse(typeArg, true, out parsedType))
+            else if (!Enum.TryParse(args[0], true, out parsedType))
             {
-                System.Console.WriteLine($"Unknown type: {typeArg}. Valid: Infantry, Archer, Cavalry, Ballista, Medic");
+                System.Console.WriteLine($"Unknown type: {args[0]}. Valid: Infantry, Archer, Cavalry, Ballista, Medic");
                 return;
             }
 
-            if (args.Length < argOff + 3)
+            if (args.Length < 3)
             {
-                System.Console.WriteLine("Usage: create [enemy] <type> <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] | create <type> <x> <y>");
                 return;
             }
 
-            if (!float.TryParse(args[argOff + 1], out float cx) || !float.TryParse(args[argOff + 2], out float cy))
+            if (!float.TryParse(args[1], out float cx) || !float.TryParse(args[2], out float cy))
             {
                 System.Console.WriteLine("Invalid coordinates.");
                 return;
@@ -264,12 +244,11 @@ public partial class GameScreen
             }
             _entityManager.GetPosition(newId) = new PositionComponent { X = cx, Y = cy };
             _entityManager.GetUnitType(newId) = new UnitTypeComponent { Type = parsedType };
-            _entityManager.GetTeam(newId).TeamId = teamId;
             _entityManager.GetMove(newId).Speed = UnitStats.RollSpeed(parsedType);
             _entityManager.GetVision(newId).SightRange = UnitStats.RollSightRange(parsedType);
             float hp2 = UnitStats.RollHP(parsedType);
             _entityManager.GetHealth(newId) = new HealthComponent { MaxHP = hp2, CurrentHP = hp2 };
-            System.Console.WriteLine($"Created {(teamId == 1 ? "enemy " : "")}{parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
+            System.Console.WriteLine($"Created {parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
         });
 
         _console.RegisterCommand("move", args =>
@@ -609,25 +588,18 @@ public partial class GameScreen
             if (args.Length == 0)
             {
                 System.Console.WriteLine("Usage:");
-                System.Console.WriteLine("  vision all          — toggle reveal entire map");
                 System.Console.WriteLine("  vision unit all     — show sight range of all units");
                 System.Console.WriteLine("  vision unit <id>    — show sight range of a unit");
-                System.Console.WriteLine("  vision none         — reset to normal fog");
-                System.Console.WriteLine($"Current: revealAll={_revealAll}, mode={_visionMode}, id={_visionUnitId}");
+                System.Console.WriteLine("  vision none         — hide all sight overlays");
+                System.Console.WriteLine($"Current: mode={_visionMode}, id={_visionUnitId}");
                 return;
             }
 
-            if (args[0] == "all")
+            if (args[0] == "none")
             {
-                _revealAll = !_revealAll;
-                System.Console.WriteLine($"Reveal all: {_revealAll}");
-            }
-            else if (args[0] == "none")
-            {
-                _revealAll = false;
                 _visionMode = VisionMode.None;
                 _visionUnitId = -1;
-                System.Console.WriteLine("Vision reset to normal.");
+                System.Console.WriteLine("Vision overlay hidden.");
             }
             else if (args[0] == "unit")
             {

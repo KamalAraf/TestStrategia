@@ -38,11 +38,9 @@ public partial class GameScreen : IDisposable
     private const int FarUpdateInterval = 5;
     private int _tick;
 
-    private bool _revealAll;
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
-    private readonly bool[] _visible;
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
@@ -72,7 +70,6 @@ public partial class GameScreen : IDisposable
         _shapeRenderer = new ShapeRenderer(graphicsDevice);
         _console = new DevConsole();
         _viewport = graphicsDevice.Viewport;
-        _visible = new bool[_entityManager.Max];
 
         _entityManager.Create();
         _entityManager.GetPosition(0) = new PositionComponent
@@ -82,7 +79,6 @@ public partial class GameScreen : IDisposable
         };
         var rt = (UnitType)Random.Shared.Next(5);
         _entityManager.GetUnitType(0) = new UnitTypeComponent { Type = rt };
-        _entityManager.GetTeam(0).TeamId = 0;
         _entityManager.GetMove(0).Speed = UnitStats.RollSpeed(rt);
         _entityManager.GetVision(0).SightRange = UnitStats.RollSightRange(rt);
         float hp = UnitStats.RollHP(rt);

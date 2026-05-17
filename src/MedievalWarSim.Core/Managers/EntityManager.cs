@@ -10,7 +10,6 @@ public class EntityManager
     private readonly UnitTypeComponent[]  _unitTypes;
     private readonly MoveComponent[] _moves;
     private readonly HealthComponent[] _health;
-    private readonly TeamComponent[] _teams;
     private readonly VisionComponent[] _visions;
     private readonly bool[]           _alive;
 
@@ -24,7 +23,6 @@ public class EntityManager
         _unitTypes = new UnitTypeComponent[MAX_ENTITIES];
         _moves = new MoveComponent[MAX_ENTITIES];
         _health = new HealthComponent[MAX_ENTITIES];
-        _teams = new TeamComponent[MAX_ENTITIES];
         _visions = new VisionComponent[MAX_ENTITIES];
         _alive = new bool[MAX_ENTITIES];
     }
@@ -82,13 +80,6 @@ public class EntityManager
         if ((uint)entityId >= (uint)MAX_ENTITIES)
             throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
         return ref _health[entityId];
-    }
-
-    public ref TeamComponent GetTeam(int entityId)
-    {
-        if ((uint)entityId >= (uint)MAX_ENTITIES)
-            throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
-        return ref _teams[entityId];
     }
 
     public ref VisionComponent GetVision(int entityId)

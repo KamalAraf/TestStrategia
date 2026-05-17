@@ -48,30 +48,6 @@ public partial class GameScreen
             _spatialGrid.Insert(i, p.X, p.Y);
         }
 
-        // ---- Vision: compute visible enemies ----
-        if (!_revealAll)
-        {
-            Array.Clear(_visible, 0, _entityManager.HighWaterMark);
-            int hwm = _entityManager.HighWaterMark;
-            for (int i = 0; i < hwm; i++)
-            {
-                if (!_entityManager.IsAlive(i)) continue;
-                if (_entityManager.GetTeam(i).TeamId != 0) continue;
-                // Stationary units: only update vision every 10 frames
-                if (!_entityManager.GetMove(i).IsMoving && _tick % 10 != 0) continue;
-                var  pos   = _entityManager.GetPosition(i);
-                float sight = _entityManager.GetVision(i).SightRange;
-                _nearbyBuffer.Clear();
-                _spatialGrid.Query(pos.X, pos.Y, sight, _nearbyBuffer);
-                foreach (int j in _nearbyBuffer)
-                {
-                    if (j == i || !_entityManager.IsAlive(j)) continue;
-                    if (_entityManager.GetTeam(j).TeamId == 0) continue;
-                    _visible[j] = true;
-                }
-            }
-        }
-
         _tick++;
         for (int i = 0; i < _entityManager.HighWaterMark; i++)
         {
@@ -288,35 +264,23 @@ public partial class GameScreen
                 sy + sr < -DrawMargin || sy - sr > _viewport.Height + DrawMargin)
                 continue;
 
-            bool isPlayer = _entityManager.GetTeam(i).TeamId == 0;
-            bool visible = _revealAll || isPlayer || _visible[i];
-
             int    sides       = UnitTypeToSides(type);
             ref var move       = ref _entityManager.GetMove(i);
             float  rotation    = move.FacingAngle;
+            Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
+            _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
 
-            if (isPlayer || visible)
+            var hp = _entityManager.GetHealth(i);
+            if (hp.CurrentHP < hp.MaxHP && sr > 4f)
             {
-                Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : isPlayer ? null : Color.Red;
-                _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
-
-                var hp = _entityManager.GetHealth(i);
-                if (hp.CurrentHP < hp.MaxHP && sr > 4f)
-                {
-                    float barW = sr * 2f * 0.85f;
-                    float barH = 3f;
-                    float barX = sx - barW / 2f;
-                    float barY = sy - sr - barH - 2f;
-                    float ratio = hp.CurrentHP / hp.MaxHP;
-                    Color barColor = ratio > 0.6f ? Color.Lime : ratio > 0.3f ? Color.Yellow : Color.Red;
-                    _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW, barH, new Color(30, 30, 30, 180), Color.White * 0.4f, 0.5f);
-                    _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW * ratio, barH, barColor, Color.Transparent, 0f);
-                }
-            }
-            else
-            {
-                _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, new Color(60, 60, 60));
-                _shapeRenderer.DrawRectangle(spriteBatch, sx - sr, sy - sr, sr * 2f, sr * 2f, new Color(0, 0, 0, 140), Color.Transparent, 0f);
+                float barW = sr * 2f * 0.85f;
+                float barH = 3f;
+                float barX = sx - barW / 2f;
+                float barY = sy - sr - barH - 2f;
+                float ratio = hp.CurrentHP / hp.MaxHP;
+                Color barColor = ratio > 0.6f ? Color.Lime : ratio > 0.3f ? Color.Yellow : Color.Red;
+                _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW, barH, new Color(30, 30, 30, 180), Color.White * 0.4f, 0.5f);
+                _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW * ratio, barH, barColor, Color.Transparent, 0f);
             }
         }
 
@@ -335,9 +299,7 @@ public partial class GameScreen
                     sy + sight < -DrawMargin || sy - sight > _viewport.Height + DrawMargin)
                     continue;
 
-                bool isEnemy = _entityManager.GetTeam(i).TeamId != 0;
-                Color circleColor = isEnemy ? Color.Red * 0.3f : Color.White * 0.3f;
-                _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sight, circleColor);
+                _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sight, Color.White * 0.3f);
             }
         }
 
@@ -368,11 +330,9 @@ public partial class GameScreen
         var type = _entityManager.GetUnitType(id);
         var move = _entityManager.GetMove(id);
         var hp   = _entityManager.GetHealth(id);
-        var team = _entityManager.GetTeam(id);
         var vis  = _entityManager.GetVision(id);
         System.Console.WriteLine($"Unit {id}:");
         System.Console.WriteLine($"  Type:      {type.Type}");
-        System.Console.WriteLine($"  Team:      {(team.TeamId == 0 ? "Player" : "Enemy")}");
         System.Console.Write($"  Position:  ({pos.X:F1};{pos.Y:F1})");
         if (move.IsMoving)
             System.Console.Write($" -> ({move.TargetX:F1};{move.TargetY:F1})");
