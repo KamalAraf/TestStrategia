@@ -43,9 +43,8 @@ public partial class GameScreen : IDisposable
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
 
-    private RenderTarget2D? _rtVision;  // corrente: bianco=visibile, nero=no
-    private RenderTarget2D? _rtExplored; // permanente: grigio=esplorato, accumulato
-    private RenderTarget2D? _rtFog;      // combinato per multiply pass
+    private RenderTarget2D? _rtVision;  // per-frame: bianco=visibile ora, nero=no
+    private RenderTarget2D? _rtFog;     // persistente: bianco=visibile, grigio=esplorato, nero=inesplorato
     private int _rtW, _rtH;
     private static readonly BlendState FogBlend = new()
     {
@@ -107,7 +106,6 @@ public partial class GameScreen : IDisposable
     {
         _shapeRenderer.Dispose();
         _rtVision?.Dispose();
-        _rtExplored?.Dispose();
         _rtFog?.Dispose();
     }
 }

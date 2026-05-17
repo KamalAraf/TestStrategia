@@ -259,18 +259,17 @@ public partial class GameScreen
             // Ensure RTs match viewport
             if (_rtVision == null || _rtW != w || _rtH != h)
             {
-                _rtVision?.Dispose(); _rtExplored?.Dispose(); _rtFog?.Dispose();
-                _rtVision  = new RenderTarget2D(_graphicsDevice, w, h);
-                _rtExplored = new RenderTarget2D(_graphicsDevice, w, h, false,
+                _rtVision?.Dispose(); _rtFog?.Dispose();
+                _rtVision = new RenderTarget2D(_graphicsDevice, w, h);
+                _rtFog    = new RenderTarget2D(_graphicsDevice, w, h, false,
                     SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-                _rtFog      = new RenderTarget2D(_graphicsDevice, w, h);
                 _rtW = w; _rtH = h;
-                _graphicsDevice.SetRenderTarget(_rtExplored);
-                _graphicsDevice.Clear(Color.Black); // init: mai visto
+                _graphicsDevice.SetRenderTarget(_rtFog);
+                _graphicsDevice.Clear(Color.Black); // init: tutto inesplorato
                 _graphicsDevice.SetRenderTarget(null);
             }
 
-            // ---- 1. RT_v: current vision (white circles on black) ----
+            // ---- 1. Current vision: white circles on black ----
             _graphicsDevice.SetRenderTarget(_rtVision);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
@@ -288,22 +287,17 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 2. RT_e: accumulate explored (grey) from current vision ----
-            // Draw RT_v with tint (100,100,100): where alpha > 0, set to grey
-            _graphicsDevice.SetRenderTarget(_rtExplored);
-            spriteBatch.Begin();
-            spriteBatch.Draw(_rtVision, Vector2.Zero, new Color(100, 100, 100, 255));
-            spriteBatch.End();
-
-            // ---- 3. RT_f: combine — explored (grey) + vision overwrites to white ----
+            // ---- 2. Accumulate into fog RT: explored=grey, current vision=white ----
             _graphicsDevice.SetRenderTarget(_rtFog);
-            _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
-            spriteBatch.Draw(_rtExplored, Vector2.Zero, Color.White);
+            // First pass: areas in current vision become explored (grey)
+            spriteBatch.Draw(_rtVision, Vector2.Zero, new Color(100, 100, 100, 255));
+            // Second pass: areas in current vision become bright white
+            // White overwrites grey thanks to AlphaBlend (alpha=1 → full coverage)
             spriteBatch.Draw(_rtVision, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            // ---- 4. Draw units onto backbuffer ----
+            // ---- 3. Draw units onto backbuffer ----
             _graphicsDevice.SetRenderTarget(null);
             _graphicsDevice.Clear(new Color(30, 30, 30));
             spriteBatch.Begin();
@@ -335,7 +329,7 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 5. Apply fog multiply: white=visibile, grey=esplorato, black=inesplorato ----
+            // ---- 4. Apply fog multiply: white=visibile, grey=esplorato, black=inesplorato ----
             spriteBatch.Begin(SpriteSortMode.Deferred, FogBlend);
             spriteBatch.Draw(_rtFog, Vector2.Zero, Color.White);
             spriteBatch.End();
