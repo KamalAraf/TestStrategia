@@ -1,0 +1,39 @@
+namespace MedievalWarSim.Core.DataStructures;
+
+public class SpatialGrid
+{
+    private readonly Dictionary<long, List<int>> _cells = new();
+    private const float CellSize = 200f;
+
+    public void Clear() => _cells.Clear();
+
+    public void Insert(int id, float x, float y)
+    {
+        int cx = (int)MathF.Floor(x / CellSize);
+        int cy = (int)MathF.Floor(y / CellSize);
+        long key = (long)cx << 32 | (uint)cy;
+        if (!_cells.TryGetValue(key, out var list))
+            _cells[key] = list = new List<int>();
+        list.Add(id);
+    }
+
+    public void Query(float x, float y, float radius, List<int> result)
+    {
+        int minCx = (int)MathF.Floor((x - radius) / CellSize);
+        int maxCx = (int)MathF.Floor((x + radius) / CellSize);
+        int minCy = (int)MathF.Floor((y - radius) / CellSize);
+        int maxCy = (int)MathF.Floor((y + radius) / CellSize);
+
+        for (int cx = minCx; cx <= maxCx; cx++)
+        {
+            for (int cy = minCy; cy <= maxCy; cy++)
+            {
+                long key = (long)cx << 32 | (uint)cy;
+                if (_cells.TryGetValue(key, out var list))
+                {
+                    result.AddRange(list);
+                }
+            }
+        }
+    }
+}

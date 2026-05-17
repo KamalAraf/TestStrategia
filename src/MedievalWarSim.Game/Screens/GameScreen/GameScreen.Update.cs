@@ -38,6 +38,15 @@ public partial class GameScreen
 
         ProcessMouseInput(currentMouse);
 
+        // ---- Spatial grid: snapshot positions before movement ----
+        _spatialGrid.Clear();
+        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        {
+            if (!_entityManager.IsAlive(i)) continue;
+            var p = _entityManager.GetPosition(i);
+            _spatialGrid.Insert(i, p.X, p.Y);
+        }
+
         _tick++;
         for (int i = 0; i < _entityManager.HighWaterMark; i++)
         {
@@ -69,11 +78,90 @@ public partial class GameScreen
                 continue;
             }
 
+            // ---- Compute desired velocity ----
             float step = move.Speed * dt;
             if (step >= dist) step = dist;
+            float vx = dx / dist * step;
+            float vy = dy / dist * step;
 
-            pos.X += dx / dist * step;
-            pos.Y += dy / dist * step;
+            // ---- Sliding collision ----
+            float queryR = radius + 50f;
+            _nearbyBuffer.Clear();
+            _spatialGrid.Query(pos.X, pos.Y, queryR, _nearbyBuffer);
+
+            foreach (int j in _nearbyBuffer)
+            {
+                if (j == i || !_entityManager.IsAlive(j)) continue;
+                ref var posJ = ref _entityManager.GetPosition(j);
+                float rJ = GetUnitRadius(_entityManager.GetUnitType(j).Type);
+                float minDist = radius + rJ + 3f;
+
+                float rdx = posJ.X - pos.X;
+                float rdy = posJ.Y - pos.Y;
+                float rDistSq = rdx * rdx + rdy * rdy;
+                if (rDistSq < 0.0001f || rDistSq >= minDist * minDist) continue;
+
+                float rDist = MathF.Sqrt(rDistSq);
+                float nx = rdx / rDist;
+                float ny = rdy / rDist;
+
+                // Separate overlapping positions
+                float overlap = minDist - rDist;
+                pos.X -= nx * overlap;
+                pos.Y -= ny * overlap;
+
+                // Remove velocity component toward the other unit (sliding)
+                float dot = vx * nx + vy * ny;
+                if (dot > 0f)
+                {
+                    vx -= dot * nx;
+                    vy -= dot * ny;
+                }
+            }
+
+            // ---- Stuck detection (crowded arrival) ----
+            float effectiveSpeed = MathF.Sqrt(vx * vx + vy * vy);
+            if (effectiveSpeed < 0.5f && dist < radius * 4f)
+            {
+                move.IsMoving = false;
+                continue;
+            }
+
+            pos.X += vx;
+            pos.Y += vy;
+        }
+
+        // ---- Stationary separation (resolve overlaps for all entities) ----
+        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        {
+            if (!_entityManager.IsAlive(i)) continue;
+            ref var pos = ref _entityManager.GetPosition(i);
+            float radius = GetUnitRadius(_entityManager.GetUnitType(i).Type);
+
+            _nearbyBuffer.Clear();
+            _spatialGrid.Query(pos.X, pos.Y, radius + 50f, _nearbyBuffer);
+
+            foreach (int j in _nearbyBuffer)
+            {
+                if (j <= i || !_entityManager.IsAlive(j)) continue;
+                ref var posJ = ref _entityManager.GetPosition(j);
+                float rJ = GetUnitRadius(_entityManager.GetUnitType(j).Type);
+                float minDist = radius + rJ + 3f;
+
+                float rdx = posJ.X - pos.X;
+                float rdy = posJ.Y - pos.Y;
+                float rDistSq = rdx * rdx + rdy * rdy;
+                if (rDistSq < 0.0001f || rDistSq >= minDist * minDist) continue;
+
+                float rDist = MathF.Sqrt(rDistSq);
+                float overlap = (minDist - rDist) * 0.5f;
+                float nx = rdx / rDist;
+                float ny = rdy / rDist;
+                pos.X -= nx * overlap;
+                pos.Y -= ny * overlap;
+                posJ.X += nx * overlap;
+                posJ.Y += ny * overlap;
+            }
         }
 
         _frameCount++;

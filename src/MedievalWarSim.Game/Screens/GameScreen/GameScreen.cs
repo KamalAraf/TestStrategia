@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MedievalWarSim.Core;
 using MedievalWarSim.Core.Components;
 using MedievalWarSim.Core.Data;
+using MedievalWarSim.Core.DataStructures;
 using MedievalWarSim.Core.Enums;
 using MedievalWarSim.Core.Managers;
 using MedievalWarSim.Game;
@@ -19,6 +20,8 @@ public partial class GameScreen : IDisposable
     private readonly EntityManager _entityManager;
     private readonly ShapeRenderer _shapeRenderer;
     private readonly DevConsole _console;
+    private readonly SpatialGrid _spatialGrid = new();
+    private readonly List<int> _nearbyBuffer = new();
     private KeyboardState _prevKeyboard;
     private MouseState _prevMouse;
     private readonly HashSet<int> _selectedUnitIds = new();
