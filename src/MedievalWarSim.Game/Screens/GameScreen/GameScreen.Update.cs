@@ -257,22 +257,23 @@ public partial class GameScreen
             int w = _viewport.Width, h = _viewport.Height;
 
             // Ensure RTs match viewport
-            if (_rtVision == null || _rtW != w || _rtH != h)
+            if (_rtFog == null || _rtW != w || _rtH != h)
             {
-                _rtVision?.Dispose(); _rtFog?.Dispose();
-                _rtVision = new RenderTarget2D(_graphicsDevice, w, h);
-                _rtFog    = new RenderTarget2D(_graphicsDevice, w, h, false,
+                _rtFog?.Dispose(); _rtFinal?.Dispose();
+                _rtFog   = new RenderTarget2D(_graphicsDevice, w, h, false,
                     SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+                _rtFinal = new RenderTarget2D(_graphicsDevice, w, h);
                 _rtW = w; _rtH = h;
                 _graphicsDevice.SetRenderTarget(_rtFog);
-                _graphicsDevice.Clear(Color.Black); // init: tutto inesplorato
+                _graphicsDevice.Clear(Color.Black);
                 _graphicsDevice.SetRenderTarget(null);
             }
 
-            // ---- 1. Current vision: white circles on black ----
-            _graphicsDevice.SetRenderTarget(_rtVision);
+            // ---- 1. RT_final: explored (from RT_fog) + white circles (current vision) ----
+            _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
+            spriteBatch.Draw(_rtFog, Vector2.Zero, Color.White); // explored grey
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -283,21 +284,11 @@ public partial class GameScreen
                 if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
                     sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
                 _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
-                    Color.White, Color.Transparent);
+                    Color.White, Color.Transparent); // current vision bright
             }
             spriteBatch.End();
 
-            // ---- 2. Accumulate into fog RT: explored=grey, current vision=white ----
-            _graphicsDevice.SetRenderTarget(_rtFog);
-            spriteBatch.Begin();
-            // First pass: areas in current vision become explored (grey)
-            spriteBatch.Draw(_rtVision, Vector2.Zero, new Color(100, 100, 100, 255));
-            // Second pass: areas in current vision become bright white
-            // White overwrites grey thanks to AlphaBlend (alpha=1 → full coverage)
-            spriteBatch.Draw(_rtVision, Vector2.Zero, Color.White);
-            spriteBatch.End();
-
-            // ---- 3. Draw units onto backbuffer ----
+            // ---- 2. Draw units onto backbuffer ----
             _graphicsDevice.SetRenderTarget(null);
             _graphicsDevice.Clear(new Color(30, 30, 30));
             spriteBatch.Begin();
@@ -329,9 +320,27 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 4. Apply fog multiply: white=visibile, grey=esplorato, black=inesplorato ----
+            // ---- 3. Apply fog multiply: white=visibile, grey=esplorato, black=inesplorato ----
             spriteBatch.Begin(SpriteSortMode.Deferred, FogBlend);
-            spriteBatch.Draw(_rtFog, Vector2.Zero, Color.White);
+            spriteBatch.Draw(_rtFinal, Vector2.Zero, Color.White);
+            spriteBatch.End();
+
+            // ---- 4. Accumulate explored: draw grey circles onto RT_fog (persistent) ----
+            // RT_fog last used as TEXTURE in step 1 — safe to use as RT now (different frame)
+            _graphicsDevice.SetRenderTarget(_rtFog);
+            spriteBatch.Begin();
+            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            {
+                if (!_entityManager.IsAlive(i)) continue;
+                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
+                var  pos   = _entityManager.GetPosition(i);
+                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
+                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
+                if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
+                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
+                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
+                    new Color(180, 180, 180, 255), Color.Transparent);
+            }
             spriteBatch.End();
 
             // ---- 4. UI overlay ----
