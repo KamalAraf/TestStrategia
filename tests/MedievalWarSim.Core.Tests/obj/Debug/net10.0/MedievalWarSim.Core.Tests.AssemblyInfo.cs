@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MedievalWarSim.Core.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8977ab983682212db32fe4dce246ee847b192eac")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d8e8dbf53e6b4ce399ffc982d54fb5e913298e9e")]
 [assembly: System.Reflection.AssemblyProductAttribute("MedievalWarSim.Core.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MedievalWarSim.Core.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

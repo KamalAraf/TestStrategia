@@ -38,3 +38,4 @@ C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\obj\Debug\net10.0\refint\Me
 C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\obj\Debug\net10.0\MedievalWarSim.Game.pdb
 C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\obj\Debug\net10.0\MedievalWarSim.Game.genruntimeconfig.cache
 C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\obj\Debug\net10.0\ref\MedievalWarSim.Game.dll
+C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\bin\Debug\net10.0\Content\DebugFont.xnb
