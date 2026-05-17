@@ -70,8 +70,9 @@ public class DevConsole
     public void Close()
     {
         if (!_running) return;
-
         _running = false;
+
+        _inputThread?.Join(100);
 
         if (_ctrlHandler != null)
         {
@@ -80,6 +81,9 @@ public class DevConsole
         }
 
         FreeConsole();
+
+        _inputThread?.Join(500);
+        _inputThread = null;
     }
 
     public string? ReadCommand()

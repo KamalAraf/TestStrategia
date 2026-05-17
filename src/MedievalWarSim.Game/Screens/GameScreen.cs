@@ -26,6 +26,7 @@ public class GameScreen : IDisposable
     private int _dragEndX, _dragEndY;
 
     private const float UnitRadius = 16f;
+    private const float MoveSpeed = 120f;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -309,6 +310,59 @@ public class GameScreen : IDisposable
             System.Console.WriteLine($"Created unit {id2} at ({x:F0}, {y:F0}).");
         });
 
+        _console.RegisterCommand("move", args =>
+        {
+            if (args.Length == 0)
+            {
+                System.Console.WriteLine("Usage: move <id> <x> <y> | move random");
+                return;
+            }
+
+            if (args[0] == "random")
+            {
+                if (_selectedUnitIds.Count == 0)
+                {
+                    System.Console.WriteLine("No units selected.");
+                    return;
+                }
+                foreach (int id in _selectedUnitIds)
+                {
+                    ref var move = ref _entityManager.GetMove(id);
+                    move.TargetX = Random.Shared.Next(50, _viewport.Width - 50);
+                    move.TargetY = Random.Shared.Next(50, _viewport.Height - 50);
+                    move.Speed = MoveSpeed;
+                    move.IsMoving = true;
+                }
+                System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to random positions.");
+                return;
+            }
+
+            if (args.Length < 3 || !int.TryParse(args[0], out int moveId))
+            {
+                System.Console.WriteLine("Usage: move <id> <x> <y> | move random");
+                return;
+            }
+
+            if (!_entityManager.IsAlive(moveId))
+            {
+                System.Console.WriteLine($"Unit {moveId} does not exist.");
+                return;
+            }
+
+            if (!float.TryParse(args[1], out float mx) || !float.TryParse(args[2], out float my))
+            {
+                System.Console.WriteLine("Invalid coordinates.");
+                return;
+            }
+
+            ref var mv = ref _entityManager.GetMove(moveId);
+            mv.TargetX = mx;
+            mv.TargetY = my;
+            mv.Speed = MoveSpeed;
+            mv.IsMoving = true;
+            System.Console.WriteLine($"Unit {moveId} moving to ({mx:F0}, {my:F0}).");
+        });
+
         // showclick — DEBUG ONLY: prints click coords & focus info
         // Uncomment by removing the // below and rebuilding.
         //_console.RegisterCommand("showclick", args =>
@@ -327,10 +381,15 @@ public class GameScreen : IDisposable
     {
         var pos  = _entityManager.GetPosition(id);
         var type = _entityManager.GetUnitType(id);
+        var move = _entityManager.GetMove(id);
         System.Console.WriteLine($"Unit {id}:");
         System.Console.WriteLine($"  Type:     {type.Type}");
-        System.Console.WriteLine($"  Position: ({pos.X:F1}, {pos.Y:F1})");
+        System.Console.Write($"  Position: ({pos.X:F1}, {pos.Y:F1})");
+        if (move.IsMoving)
+            System.Console.Write($" -> ({move.TargetX:F1}, {move.TargetY:F1})");
+        System.Console.WriteLine();
         System.Console.WriteLine($"  Selected: {_selectedUnitIds.Contains(id)}");
+        System.Console.WriteLine($"  Moving:   {move.IsMoving}");
     }
 
     public void Update(GameTime gameTime)
@@ -399,6 +458,45 @@ public class GameScreen : IDisposable
             }
 
             _isDragging = false;
+        }
+
+        bool rightJustPressed = currentMouse.RightButton == ButtonState.Pressed &&
+                                _prevMouse.RightButton == ButtonState.Released;
+        if (rightJustPressed && IsClickOnGameWindow() && _selectedUnitIds.Count > 0)
+        {
+            foreach (int id in _selectedUnitIds)
+            {
+                ref var move = ref _entityManager.GetMove(id);
+                move.TargetX = currentMouse.X;
+                move.TargetY = currentMouse.Y;
+                move.Speed = MoveSpeed;
+                move.IsMoving = true;
+            }
+        }
+
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        {
+            if (!_entityManager.IsAlive(i)) continue;
+            ref var move = ref _entityManager.GetMove(i);
+            if (!move.IsMoving) continue;
+
+            ref var pos = ref _entityManager.GetPosition(i);
+            float dx = move.TargetX - pos.X;
+            float dy = move.TargetY - pos.Y;
+            float dist = MathF.Sqrt(dx * dx + dy * dy);
+
+            if (dist < 1f)
+            {
+                move.IsMoving = false;
+                continue;
+            }
+
+            float step = move.Speed * dt;
+            if (step >= dist) step = dist;
+
+            pos.X += dx / dist * step;
+            pos.Y += dy / dist * step;
         }
 
         _prevKeyboard = currentKey;
