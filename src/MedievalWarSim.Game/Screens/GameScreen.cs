@@ -26,7 +26,7 @@ public class GameScreen : IDisposable
 
     private const float UnitRadius = 16f;
     private const float PixelsPerMeter = 32f;
-    private const float MoveSpeed = 90f; // ~2.8 m/s (passo militare)
+    private const float MoveSpeed = 100f; // ~3.1 m/s
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
