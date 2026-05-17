@@ -261,7 +261,8 @@ public partial class GameScreen
             {
                 _rtVision?.Dispose(); _rtExplored?.Dispose(); _rtFog?.Dispose();
                 _rtVision  = new RenderTarget2D(_graphicsDevice, w, h);
-                _rtExplored = new RenderTarget2D(_graphicsDevice, w, h);
+                _rtExplored = new RenderTarget2D(_graphicsDevice, w, h, false,
+                    SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
                 _rtFog      = new RenderTarget2D(_graphicsDevice, w, h);
                 _rtW = w; _rtH = h;
                 _graphicsDevice.SetRenderTarget(_rtExplored);
