@@ -986,3 +986,7 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **ShapeRenderer.DrawShape()**: pre-renderizza texture poligonali (fill + border, anti-aliased) con parametro `rotation`.
 - **FacingAngle** in `MoveComponent`: aggiornato durante il movimento (`atan2(dy,dx) + PI/2`), l'unità ruota verso la direzione.
 - **`UnitTypeToSides()`**: mapping in `GameScreen`.
+- **Random type on spawn**: `create random`, `create <x> <y>`, e unità iniziale usano tipo casuale invece di Infantry fisso.
+- **`create <type> <x> <y>`**: crea unità di tipo specifico (per nome o ID). Es: `create cavalry 500 300`, `create 3 100 200`.
+- **Per-type radius**: `UnitStats.BaseRadius`. Infantry/Cavalry=16, Archer/Medic=14, Ballista=20 (1.25×). Click detection e culling usano il raggio dell'unità.
+- **Even-sided polygon offset**: poligoni con lati pari (4, 6, 8) ruotati di `π/sides` — lato piatto davanti invece di vertice.
