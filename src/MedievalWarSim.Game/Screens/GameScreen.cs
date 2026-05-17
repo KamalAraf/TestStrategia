@@ -338,6 +338,8 @@ public class GameScreen : IDisposable
                 _dragStartY = currentMouse.Y;
                 _dragEndX   = currentMouse.X;
                 _dragEndY   = currentMouse.Y;
+                if (!IsCtrlHeld())
+                    _selectedUnitIds.Clear();
             }
         }
 
