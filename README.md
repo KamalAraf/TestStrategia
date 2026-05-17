@@ -951,5 +951,6 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **Ctrl+drag / Ctrl+click**: appends to or toggles selection instead of replacing.
 - **ShapeRenderer.DrawRectangle()**: new method with 1x1 pixel texture for filled rectangles + borders (used for selection box rendering).
 - **Selection box visuals**: semi-transparent green fill + lime border drawn during drag.
+- **Crash log**: unhandled exceptions are written to `crash.txt` (overwritten each crash) via try-catch in `Program.cs` + `AppDomain.UnhandledException`.
 
 ### 16/05/2026 — Mouse click detection, focus handling, thread safety
