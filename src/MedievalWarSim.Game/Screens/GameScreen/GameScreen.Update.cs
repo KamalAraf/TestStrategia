@@ -36,7 +36,8 @@ public partial class GameScreen
             _console.ExecuteCommand(cmd);
         }
 
-        ProcessMouseInput(currentMouse);
+        bool isGameFocused = IsGameFocused();
+        ProcessMouseInput(currentMouse, isGameFocused);
 
         // ---- Spatial grid: snapshot positions before movement ----
         _spatialGrid.Clear();
@@ -100,14 +101,25 @@ public partial class GameScreen
                 float rdx = posJ.X - pos.X;
                 float rdy = posJ.Y - pos.Y;
                 float rDistSq = rdx * rdx + rdy * rdy;
-                if (rDistSq < 0.0001f || rDistSq >= minDist * minDist) continue;
+                if (rDistSq >= minDist * minDist) continue;
 
-                float rDist = MathF.Sqrt(rDistSq);
-                float nx = rdx / rDist;
-                float ny = rdy / rDist;
+                float rDist, nx, ny;
+                if (rDistSq < 0.0001f)
+                {
+                    float angle = Random.Shared.NextSingle() * MathF.PI * 2f;
+                    nx = MathF.Cos(angle);
+                    ny = MathF.Sin(angle);
+                    rDist = 0f;
+                }
+                else
+                {
+                    rDist = MathF.Sqrt(rDistSq);
+                    nx = rdx / rDist;
+                    ny = rdy / rDist;
+                }
 
                 // Separate overlapping positions
-                float overlap = minDist - rDist;
+                float overlap = (rDist > 0f) ? (minDist - rDist) : minDist;
                 pos.X -= nx * overlap;
                 pos.Y -= ny * overlap;
 
@@ -121,20 +133,31 @@ public partial class GameScreen
             }
 
             // ---- Stuck detection (crowded arrival) ----
-            float effectiveSpeed = MathF.Sqrt(vx * vx + vy * vy);
-            if (effectiveSpeed < 1f)
+            // Every 0.5s measure net progress toward target.
+            // If <5px progress in 0.5s (≈10 px/s) while not at target → stuck.
+            move.DistCheckTimer += dt;
+            if (move.DistCheckTimer >= 0.5f)
             {
-                move.StuckTimer += dt;
-                if (move.StuckTimer >= 0.3f)
+                move.DistCheckTimer = 0f;
+                if (dist > 1f)
                 {
-                    move.IsMoving = false;
-                    move.StuckTimer = 0f;
-                    continue;
+                    if (move.PrevDist <= 0f)
+                        move.PrevDist = dist;
+                    float progress = move.PrevDist - dist;
+                    if (progress < 1f)
+                        move.StuckTimer += 0.5f;
+                    else
+                        move.StuckTimer = 0f;
                 }
+                move.PrevDist = dist;
             }
-            else
+
+            if (move.StuckTimer >= 1f && dist > 1f)
             {
+                move.IsMoving = false;
                 move.StuckTimer = 0f;
+                move.DistCheckTimer = 0f;
+                continue;
             }
 
             pos.X += vx;
@@ -147,6 +170,16 @@ public partial class GameScreen
             if (!_entityManager.IsAlive(i)) continue;
             ref var pos = ref _entityManager.GetPosition(i);
             float radius = GetUnitRadius(_entityManager.GetUnitType(i).Type);
+
+            // Far culling: skip distant entities most frames
+            var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
+            float sr = radius * _camera.Zoom;
+            if (sx + sr < -FarMargin || sx - sr > _viewport.Width + FarMargin ||
+                sy + sr < -FarMargin || sy - sr > _viewport.Height + FarMargin)
+            {
+                if (_tick % FarUpdateInterval != 0)
+                    continue;
+            }
 
             _nearbyBuffer.Clear();
             _spatialGrid.Query(pos.X, pos.Y, radius + 50f, _nearbyBuffer);
@@ -161,16 +194,46 @@ public partial class GameScreen
                 float rdx = posJ.X - pos.X;
                 float rdy = posJ.Y - pos.Y;
                 float rDistSq = rdx * rdx + rdy * rdy;
-                if (rDistSq < 0.0001f || rDistSq >= minDist * minDist) continue;
+                if (rDistSq >= minDist * minDist) continue;
 
-                float rDist = MathF.Sqrt(rDistSq);
-                float overlap = (minDist - rDist) * 0.5f;
-                float nx = rdx / rDist;
-                float ny = rdy / rDist;
-                pos.X -= nx * overlap;
-                pos.Y -= ny * overlap;
-                posJ.X += nx * overlap;
-                posJ.Y += ny * overlap;
+                float rDist, nx, ny;
+                float overlap;
+                if (rDistSq < 0.0001f)
+                {
+                    float angle = Random.Shared.NextSingle() * MathF.PI * 2f;
+                    nx = MathF.Cos(angle);
+                    ny = MathF.Sin(angle);
+                    overlap = minDist;
+                }
+                else
+                {
+                    rDist = MathF.Sqrt(rDistSq);
+                    nx = rdx / rDist;
+                    ny = rdy / rDist;
+                    overlap = minDist - rDist;
+                }
+
+                // Only push stationary units apart from each other.
+                // If one is moving and the other isn't, only the moving one moves.
+                bool movingI = _entityManager.GetMove(i).IsMoving;
+                bool movingJ = _entityManager.GetMove(j).IsMoving;
+                if (movingI == movingJ)
+                {
+                    pos.X -= nx * overlap * 0.5f;
+                    pos.Y -= ny * overlap * 0.5f;
+                    posJ.X += nx * overlap * 0.5f;
+                    posJ.Y += ny * overlap * 0.5f;
+                }
+                else if (movingI)
+                {
+                    pos.X -= nx * overlap;
+                    pos.Y -= ny * overlap;
+                }
+                else
+                {
+                    posJ.X += nx * overlap;
+                    posJ.Y += ny * overlap;
+                }
             }
         }
 

@@ -999,3 +999,23 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
   - `type <id|all> set <typename|id> | random`
   - `select <id> | all` / `deselect <id> | all`
 - **`info` stampa HP**: mostra `HP: current/max`.
+
+### 17/05/2026 — Collision system + spatial grid + stuck detection + performance fixes + bugfixes
+
+- **SpatialGrid** (`Core/DataStructures/SpatialGrid.cs`): cella 200×200px, rebuild a ogni frame. `Query(x, y, radius, result)` su celle 3×3. Usata per trovare vicini in collisione.
+- **Sliding collision**: durante il movimento, per ogni unità si querya la grid, si separano le posizioni sovrapposte e si rimuove la componente di velocità verso l'ostacolo. Unità ferma non viene spostata.
+- **StuckTimer** in `MoveComponent`: reset quando si setta `IsMoving = true` e quando arriva a `dist < 1f`.
+- **Stationary separation pass**: dopo il movimento, risolve overlap anche per unità ferme (es. spawnate sullo stesso punto). Split 50/50 se entrambe ferme o entrambe in movimento; solo l'unità in movimento viene spostata se l'altra è ferma.
+- **Exact overlap fix**: se due unità hanno `rDistSq < 0.0001f` (stessa posizione), push in direzione random invece di `continue`. Applicato in entrambi i pass.
+- **Stuck detection evoluta**:
+  - **Iterazione 1 — speed assoluta**: `effectiveSpeed < 1f` (px/frame) — FPS-dipendente, bug ad alto FPS.
+  - **Iterazione 2 — speed in px/s**: `effectiveSpeed / dt < 1` — FPS-indipendente, ma unità in orbita hanno alta velocità laterale e non triggerano.
+  - **Iterazione 3 — velocità radiale**: `(vx·dx + vy·dy) / (dist·dt) < 10` — osserva solo la componente verso il target. L'oscillazione frame-to-frame resettava il timer.
+  - **Iterazione 4 — progresso netto (finale)**: ogni 0.5s si misura `PrevDist - dist` (progresso netto verso il target). Se < 1px in 0.5s per 2 check consecutivi (1s), unità ferma. Indipendente da oscillazioni istantanee.
+- **Stationary unit non spostata**: nella stationary separation, se una delle due unità è ferma e l'altra no, solo quella in movimento viene spostata.
+- **Performance fixes**:
+  - `SpatialGrid.Clear()` ora riutilizza le List (`foreach list.Clear()`) invece di allocare nuove ogni frame.
+  - Stationary separation con far culling (`_tick % FarUpdateInterval` per entità lontane).
+  - `IsGameFocused()` chiamato una volta sola per frame e passato a `ProcessMouseInput`.
+  - `remove all` usa `_selectedUnitIds.Clear()` invece di `Remove(i)` per ogni entità.
+  - `type random` genera fresh per ogni entità (single e all consistenti).

@@ -4,9 +4,9 @@ namespace MedievalWarSim.Screens;
 
 public partial class GameScreen
 {
-    private void ProcessMouseInput(MouseState currentMouse)
+    private void ProcessMouseInput(MouseState currentMouse, bool isGameFocused)
     {
-        if (IsGameFocused())
+        if (isGameFocused)
         {
             if (currentMouse.LeftButton == ButtonState.Pressed &&
                 _prevMouse.LeftButton   == ButtonState.Released)
@@ -30,7 +30,7 @@ public partial class GameScreen
         if (_isDragging && currentMouse.LeftButton == ButtonState.Released &&
             _prevMouse.LeftButton   == ButtonState.Pressed)
         {
-            if (IsGameFocused())
+            if (isGameFocused)
             {
                 int sdx = _dragEndX - _dragStartX;
                 int sdy = _dragEndY - _dragStartY;
@@ -62,7 +62,7 @@ public partial class GameScreen
             _isDragging = false;
         }
 
-        if (IsGameFocused())
+        if (isGameFocused)
         {
             bool rightJustPressed = currentMouse.RightButton == ButtonState.Pressed &&
                                     _prevMouse.RightButton == ButtonState.Released;
@@ -76,6 +76,8 @@ public partial class GameScreen
                     move.TargetY = wy;
                     move.IsMoving = true;
                     move.StuckTimer = 0f;
+                    move.DistCheckTimer = 0f;
+                    move.PrevDist = 0f;
                 }
             }
         }

@@ -5,7 +5,11 @@ public class SpatialGrid
     private readonly Dictionary<long, List<int>> _cells = new();
     private const float CellSize = 200f;
 
-    public void Clear() => _cells.Clear();
+    public void Clear()
+    {
+        foreach (var list in _cells.Values)
+            list.Clear();
+    }
 
     public void Insert(int id, float x, float y)
     {

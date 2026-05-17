@@ -25,10 +25,10 @@ public partial class GameScreen
                     if (_entityManager.IsAlive(i))
                     {
                         _entityManager.Destroy(i);
-                        _selectedUnitIds.Remove(i);
                         count++;
                     }
                 }
+                _selectedUnitIds.Clear();
                 System.Console.WriteLine($"Removed {count} unit(s).");
                 return;
             }
@@ -273,6 +273,8 @@ public partial class GameScreen
                     move.TargetY = _camera.Y + Random.Shared.NextSingle() * vh;
                     move.IsMoving = true;
                     move.StuckTimer = 0f;
+                    move.DistCheckTimer = 0f;
+                    move.PrevDist = 0f;
                 }
                 System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to random positions.");
                 return;
@@ -302,6 +304,8 @@ public partial class GameScreen
                     move.TargetY = sy;
                     move.IsMoving = true;
                     move.StuckTimer = 0f;
+                    move.DistCheckTimer = 0f;
+                    move.PrevDist = 0f;
                 }
                 System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to ({sx:F0}, {sy:F0}).");
                 return;
@@ -330,6 +334,8 @@ public partial class GameScreen
             mv.TargetY = my;
             mv.IsMoving = true;
             mv.StuckTimer = 0f;
+            mv.DistCheckTimer = 0f;
+            mv.PrevDist = 0f;
             System.Console.WriteLine($"Unit {moveId} moving to ({mx:F0}, {my:F0}).");
         });
 
@@ -369,7 +375,6 @@ public partial class GameScreen
 
             if (op == "random")
             {
-                var rt = (UnitType)Random.Shared.Next(5);
                 if (targetArg == "all")
                 {
                     int count = 0;
@@ -383,6 +388,7 @@ public partial class GameScreen
                 }
                 else if (int.TryParse(args[0], out int eid) && _entityManager.IsAlive(eid))
                 {
+                    var rt = (UnitType)Random.Shared.Next(5);
                     ApplyType(eid, rt);
                     System.Console.WriteLine($"Unit {eid} type set to {rt} (random).");
                 }
