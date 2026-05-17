@@ -959,5 +959,13 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **`info` / `selected`**: coords use `;` separator; `info` shows target + Moving flag.
 - **Focus detection**: checks foreground window PID against our process — no cached handle, works even if console was opened as first action.
 - **DevConsole.Close()**: double-join ensures background thread exits before FreeConsole → Open, fixing `IOException: Handle non valido`.
+- **Per-unit speed by type**: `Core/Data/UnitStats.cs` with dictionary-based unit stats (speed). Infantry=100, Archer=95, Cavalry=175, Ballista=50, Medic=100 px/s. ±5% random variance on creation. Speed is a per-instance value in `MoveComponent.Speed`, not a constant — ready for stamina/buff modifications.
+- **`set speed <value|default>`**: console command to set or reset speed. `set <id> speed 200`, `set <id> speed default`.
+- **`info` now shows speed**: unit info panel displays current Speed value.
+- **`info selected`**: shows info for single selection, lists all if multiple, "No units selected." if none.
+- **`move selected <x> <y>`**: moves all selected units to specified coordinates.
+- **`set type` now recalculates speed**: changing unit type resets speed via `UnitStats.RollSpeed(newType)`.
+- **HWND-based focus detection**: `FindWindow("MedievalWarSim")` gets the real Win32 HWND, compared with `GetForegroundWindow()` — properly distinguishes game window from AllocConsole window (same PID but different HWND). Clicking the game window while console is open now works.
+- **Removed unused code**: PID-based focus check, `RestoreGameWindow`, `_consoleWasOpen`, `SetForegroundWindow`/`FindWindow` P/Invokes (consolidated).
 
 ### 16/05/2026 — Mouse click detection, focus handling, thread safety
