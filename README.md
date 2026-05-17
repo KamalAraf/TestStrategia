@@ -945,6 +945,19 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 **Known issues:**
 - First click on the game window after focusing the console is always ignored (`GetForegroundWindow()` still returns the console window handle during that frame)
 
+### 17/05/2026 — Shapes per unit type + facing direction
+
+- **Shape per tipo**: ogni unità ha una forma geometrica diversa:
+  - Infantry → quadrato (4 lati)
+  - Archer → triangolo (3 lati)
+  - Cavalry → pentagono (5 lati)
+  - Ballista → ottagono (8 lati)
+  - Medic → esagono (6 lati)
+- **ShapeRenderer.DrawShape()**: pre-renderizza texture poligonali (fill + border) con anti-aliasing via distanza dai segmenti; accetta parametro `rotation` per l'orientamento.
+- **FacingAngle**: campo in `MoveComponent` aggiornato ogni frame durante il movimento (`atan2(dy, dx) + PI/2`). L'unità ruota per puntare verso la direzione di movimento.
+- Unità ferme mantengono l'ultimo `FacingAngle`; valore predefinito 0 (punta verso l'alto).
+- **`UnitTypeToSides()`**: mapping `UnitType → numero di lati` in `GameScreen`.
+
 ### 17/05/2026 — Refactor + camera + culling + unit speed + movement + selection
 
 - **Drag-to-select**: hold left button on game window → drag a selection rectangle → release to select all units inside. Small drags (<5px) register as clicks (unit toggle).
