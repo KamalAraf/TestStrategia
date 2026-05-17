@@ -330,23 +330,20 @@ public partial class GameScreen
             spriteBatch.Draw(_fogRT, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            // ---- 4. Vision circle borders (2px black, on top of fog) ----
-            spriteBatch.Begin();
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            // ---- 4. Border solo in ShowSingle (no overlap tra cerchi) ----
+            if (_visionMode == VisionMode.ShowSingle && _entityManager.IsAlive(_visionUnitId))
             {
-                if (!_entityManager.IsAlive(i)) continue;
-                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
-
-                var  pos   = _entityManager.GetPosition(i);
+                spriteBatch.Begin();
+                var  pos   = _entityManager.GetPosition(_visionUnitId);
                 var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
-                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
-                if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
-                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin)
-                    continue;
-
-                _shapeRenderer.DrawCircleBorder(spriteBatch, sx, sy, sight, 2f, Color.Black);
+                float sight = _entityManager.GetVision(_visionUnitId).SightRange * _camera.Zoom;
+                if (!(sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
+                      sy + sight < -DrawMargin || sy - sight > h + DrawMargin))
+                {
+                    _shapeRenderer.DrawCircleBorder(spriteBatch, sx, sy, sight, 2f, Color.Black);
+                }
+                spriteBatch.End();
             }
-            spriteBatch.End();
 
             // ---- 5. UI overlay ----
             spriteBatch.Begin();
