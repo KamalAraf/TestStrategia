@@ -46,10 +46,9 @@ public partial class GameScreen : IDisposable
     private bool _firstFogFrame;
 
     private RenderTarget2D? _rtFinal;
-    private RenderTarget2D? _rtFogA;
-    private RenderTarget2D? _rtFogB;
-    private RenderTarget2D? _currFog;   // one of A/B, written this frame
-    private RenderTarget2D? _otherFog;  // the other, read as texture
+    private Texture2D? _exploredTex;
+    private Color[]? _exploredData;
+    private int _exploredW, _exploredH;
     private int _rtW, _rtH;
     private static readonly BlendState FogBlend = new()
     {
@@ -111,7 +110,6 @@ public partial class GameScreen : IDisposable
     {
         _shapeRenderer.Dispose();
         _rtFinal?.Dispose();
-        _rtFogA?.Dispose();
-        _rtFogB?.Dispose();
+        _exploredTex?.Dispose();
     }
 }

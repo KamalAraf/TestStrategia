@@ -256,31 +256,56 @@ public partial class GameScreen
         {
             int w = _viewport.Width, h = _viewport.Height;
 
-            // Ensure RTs match viewport
+            // Ensure RT + explored texture match viewport
             if (_rtFinal == null || _rtW != w || _rtH != h)
             {
-                _rtFinal?.Dispose(); _rtFogA?.Dispose(); _rtFogB?.Dispose();
+                _rtFinal?.Dispose();
                 _rtFinal = new RenderTarget2D(_graphicsDevice, w, h);
-                _rtFogA  = new RenderTarget2D(_graphicsDevice, w, h);
-                _rtFogB  = new RenderTarget2D(_graphicsDevice, w, h);
                 _rtW = w; _rtH = h;
-                _currFog = _rtFogA;
-                _otherFog = _rtFogB;
-                // Init both to black
-                _graphicsDevice.SetRenderTarget(_rtFogA);
-                _graphicsDevice.Clear(Color.Black);
-                _graphicsDevice.SetRenderTarget(_rtFogB);
-                _graphicsDevice.Clear(Color.Black);
-                _graphicsDevice.SetRenderTarget(null);
+                int ew = Math.Max(1, w / 3), eh = Math.Max(1, h / 3);
+                _exploredTex?.Dispose();
+                _exploredTex = new Texture2D(_graphicsDevice, ew, eh);
+                _exploredW = ew; _exploredH = eh;
+                _exploredData = new Color[ew * eh];
             }
 
-            // ---- 1. rtFinal: previous explored (grey) + white circles (current vision) ----
-            // _otherFog was written in step 4 of PREVIOUS frame → safe after first frame
+            // ---- 0. Accumulate explored on CPU (1/3 res) ----
+            Color exploredGrey = new(180, 180, 180, 255);
+            float invScale = 1f / 3f;
+            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            {
+                if (!_entityManager.IsAlive(i)) continue;
+                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
+                var  pos   = _entityManager.GetPosition(i);
+                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
+                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
+                if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
+                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
+
+                int csx = (int)(sx * invScale);
+                int csy = (int)(sy * invScale);
+                int rs  = (int)(sight * invScale);
+                int rs2 = rs * rs;
+                int y0 = Math.Max(0, csy - rs);
+                int y1 = Math.Min(_exploredH - 1, csy + rs);
+                for (int dy = y0 - csy; dy <= y1 - csy; dy++)
+                {
+                    int dy2 = dy * dy;
+                    int dxMax = (int)MathF.Sqrt(Math.Max(0, rs2 - dy2));
+                    int x0 = Math.Max(0, csx - dxMax);
+                    int x1 = Math.Min(_exploredW - 1, csx + dxMax);
+                    int rowStart = (csy + dy) * _exploredW;
+                    for (int px = x0; px <= x1; px++)
+                        _exploredData[rowStart + px] = exploredGrey;
+                }
+            }
+            _exploredTex.SetData(_exploredData);
+
+            // ---- 1. Fog mask: explored grey (1/3 res) + white circles (full res) ----
             _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
-            if (!_firstFogFrame)
-                spriteBatch.Draw(_otherFog, Vector2.Zero, Color.White); // accumulated explored (grey)
+            spriteBatch.Draw(_exploredTex, new Rectangle(0, 0, w, h), Color.White);
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -331,33 +356,7 @@ public partial class GameScreen
             spriteBatch.Draw(_rtFinal, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            // ---- 4. Accumulate explored for NEXT frame: _currFog = _otherFog + grey circles ----
-            // _otherFog was written last in step 4 of PREVIOUS frame → safe after first frame
-            _graphicsDevice.SetRenderTarget(_currFog);
-            _graphicsDevice.Clear(Color.Black);
-            spriteBatch.Begin();
-            if (!_firstFogFrame)
-                spriteBatch.Draw(_otherFog, Vector2.Zero, Color.White); // carry over previous explored
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
-            {
-                if (!_entityManager.IsAlive(i)) continue;
-                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
-                var  pos   = _entityManager.GetPosition(i);
-                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
-                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
-                if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
-                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
-                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
-                    new Color(180, 180, 180, 255), Color.Transparent);
-            }
-            spriteBatch.End();
-
-            // ---- 5. Ping-pong: swap fog RTs for next frame ----
-            (_currFog, _otherFog) = (_otherFog, _currFog);
-            _firstFogFrame = false;
-            _graphicsDevice.SetRenderTarget(null);
-
-            // ---- 6. UI overlay ----
+            // ---- 4. UI overlay ----
             spriteBatch.Begin();
             if (_isDragging)
             {
