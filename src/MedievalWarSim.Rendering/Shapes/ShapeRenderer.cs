@@ -241,9 +241,10 @@ public class ShapeRenderer : IDisposable
     private static Vector2[] GenerateVertices(int sides, float radius, float cx, float cy)
     {
         var verts = new Vector2[sides];
+        float vertexAngleOffset = sides % 2 == 0 ? MathF.PI / sides : 0f;
         for (int i = 0; i < sides; i++)
         {
-            float angle = -MathF.PI / 2f + i * (MathF.PI * 2f / sides);
+            float angle = -MathF.PI / 2f + vertexAngleOffset + i * (MathF.PI * 2f / sides);
             verts[i] = new Vector2(cx + MathF.Cos(angle) * radius, cy + MathF.Sin(angle) * radius);
         }
         return verts;
