@@ -52,9 +52,18 @@ public class DevConsole
 
         if (!AllocConsole()) return;
 
+        // Reopen stdout — AllocConsole + SDL2 can leave the console stream in
+        // an invalid state, causing IOException on first WriteLine.
+        try
+        {
+            var stdout = System.Console.OpenStandardOutput();
+            System.Console.SetOut(new System.IO.StreamWriter(stdout) { AutoFlush = true });
+        }
+        catch { /* console output unavailable */ }
+
         _running = true;
-        System.Console.Title = "MedievalWarSim - Dev Console";
-        System.Console.WriteLine("Dev Console opened. Type 'help' for commands. F12 to close.");
+        try { System.Console.Title = "MedievalWarSim - Dev Console"; } catch { }
+        try { System.Console.WriteLine("Dev Console opened. Type 'help' for commands. F12 to close."); } catch { }
 
         _ctrlHandler = _ => _running = false;
         SetConsoleCtrlHandler(_ctrlHandler, true);
@@ -157,6 +166,11 @@ public class DevConsole
         }
     }
 
+    private static void SafeWrite(string? line)
+    {
+        try { System.Console.WriteLine(line); } catch { }
+    }
+
     public void ExecuteCommand(string line)
     {
         string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -167,15 +181,15 @@ public class DevConsole
 
         if (name == "help")
         {
-            System.Console.WriteLine("Available commands:");
+            SafeWrite("Available commands:");
             lock (_commands)
             {
                 foreach (var kvp in _commands)
                 {
-                    System.Console.WriteLine($"  {kvp.Key}");
+                    SafeWrite($"  {kvp.Key}");
                 }
             }
-            System.Console.WriteLine("  // showclick");
+            SafeWrite("  // showclick");
             return;
         }
 
@@ -188,6 +202,6 @@ public class DevConsole
         if (handler != null)
             handler(args);
         else
-            System.Console.WriteLine($"Unknown command: {name}. Type 'help'.");
+            SafeWrite($"Unknown command: {name}. Type 'help'.");
     }
 }

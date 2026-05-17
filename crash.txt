@@ -1,5 +1,5 @@
-[2026-05-17 13:46:49] UNHANDLED
-System.IO.IOException: Handle non valido.
+[2026-05-17 21:42:25] UNHANDLED
+System.IO.IOException: Richiesta non supportata.
    at System.ConsolePal.WindowsConsoleStream.Write(ReadOnlySpan`1 buffer)
    at System.IO.StreamWriter.Flush(Boolean flushStream, Boolean flushEncoder)
    at System.IO.StreamWriter.WriteLine(String value)
@@ -7,8 +7,8 @@ System.IO.IOException: Handle non valido.
    at System.Console.WriteLine(String value)
    at MedievalWarSim.UI.Console.DevConsole.Open() in C:\Users\kamal\TestStrategia\src\MedievalWarSim.UI\Console\DevConsole.cs:line 57
    at MedievalWarSim.UI.Console.DevConsole.Toggle() in C:\Users\kamal\TestStrategia\src\MedievalWarSim.UI\Console\DevConsole.cs:line 46
-   at MedievalWarSim.Screens.GameScreen.Update(GameTime gameTime) in C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\Screens\GameScreen.cs:line 401
-   at MedievalWarSim.Game1.Update(GameTime gameTime) in C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\Game1.cs:line 46
+   at MedievalWarSim.Screens.GameScreen.Update(GameTime gameTime) in C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\Screens\GameScreen\GameScreen.Update.cs:line 27
+   at MedievalWarSim.Game1.Update(GameTime gameTime) in C:\Users\kamal\TestStrategia\src\MedievalWarSim.Game\Game1.cs:line 49
    at Microsoft.Xna.Framework.Game.DoUpdate(GameTime gameTime)
    at Microsoft.Xna.Framework.Game.Tick()
    at Microsoft.Xna.Framework.SdlGamePlatform.RunLoop()
