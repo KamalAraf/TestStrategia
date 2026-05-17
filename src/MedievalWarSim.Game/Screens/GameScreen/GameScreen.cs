@@ -19,6 +19,7 @@ public partial class GameScreen : IDisposable
     private readonly CameraController _cameraController;
     private readonly EntityManager _entityManager;
     private readonly ShapeRenderer _shapeRenderer;
+    private readonly GraphicsDevice _graphicsDevice;
     private readonly DevConsole _console;
     private readonly SpatialGrid _spatialGrid = new();
     private readonly List<int> _nearbyBuffer = new();
@@ -41,6 +42,18 @@ public partial class GameScreen : IDisposable
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
+
+    private RenderTarget2D? _fogRT;
+    private int _fogW, _fogH;
+    private static readonly BlendState FogBlend = new()
+    {
+        ColorBlendFunction = BlendFunction.Add,
+        ColorSourceBlend = Blend.Zero,
+        ColorDestinationBlend = Blend.SourceColor,
+        AlphaBlendFunction = BlendFunction.Add,
+        AlphaSourceBlend = Blend.Zero,
+        AlphaDestinationBlend = Blend.SourceAlpha
+    };
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
@@ -68,6 +81,7 @@ public partial class GameScreen : IDisposable
         _cameraController = new CameraController(_camera);
         _entityManager = new EntityManager();
         _shapeRenderer = new ShapeRenderer(graphicsDevice);
+        _graphicsDevice = graphicsDevice;
         _console = new DevConsole();
         _viewport = graphicsDevice.Viewport;
 
@@ -90,5 +104,6 @@ public partial class GameScreen : IDisposable
     public void Dispose()
     {
         _shapeRenderer.Dispose();
+        _fogRT?.Dispose();
     }
 }

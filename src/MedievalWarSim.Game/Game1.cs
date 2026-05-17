@@ -55,9 +55,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         GraphicsDevice.Clear(new Color(0x2b, 0x2b, 0x2b));
 
-        _spriteBatch.Begin();
         _gameScreen.Draw(_spriteBatch);
-        _spriteBatch.End();
 
         base.Draw(gameTime);
     }

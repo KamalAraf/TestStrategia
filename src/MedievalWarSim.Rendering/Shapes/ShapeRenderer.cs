@@ -70,6 +70,33 @@ public class ShapeRenderer : IDisposable
         spriteBatch.Draw(_borderTexture, pos, null, borderColor, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 
+    public void DrawCircleBorder(SpriteBatch spriteBatch, float cx, float cy, float radius, float thickness, Color color)
+    {
+        int segments = (int)(MathF.PI * MathF.Sqrt(radius) * 2f);
+        if (segments < 16) segments = 16;
+        if (segments > 128) segments = 128;
+
+        float angleStep = MathF.PI * 2f / segments;
+        for (int i = 0; i < segments; i++)
+        {
+            float a1 = i * angleStep;
+            float a2 = (i + 1) * angleStep;
+            float x1 = cx + MathF.Cos(a1) * radius;
+            float y1 = cy + MathF.Sin(a1) * radius;
+            float x2 = cx + MathF.Cos(a2) * radius;
+            float y2 = cy + MathF.Sin(a2) * radius;
+
+            float dx = x2 - x1;
+            float dy = y2 - y1;
+            float len = MathF.Sqrt(dx * dx + dy * dy);
+            if (len < 0.01f) continue;
+            float angle = MathF.Atan2(dy, dx);
+
+            spriteBatch.Draw(_pixel, new Vector2(x1, y1), null, color, angle,
+                Vector2.Zero, new Vector2(len, thickness), SpriteEffects.None, 0f);
+        }
+    }
+
     public void DrawRectangle(SpriteBatch spriteBatch, float x, float y, float w, float h, Color fillColor, Color borderColor, float borderWidth = 1f)
     {
         if (w <= 0 || h <= 0) return;
