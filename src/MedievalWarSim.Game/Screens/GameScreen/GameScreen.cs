@@ -43,6 +43,7 @@ public partial class GameScreen : IDisposable
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
+    private bool _firstFogFrame;
 
     private RenderTarget2D? _rtFinal;
     private RenderTarget2D? _rtFogA;

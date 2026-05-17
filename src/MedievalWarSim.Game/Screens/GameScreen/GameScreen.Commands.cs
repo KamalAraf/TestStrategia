@@ -613,6 +613,7 @@ public partial class GameScreen
                 {
                     _visionMode = VisionMode.ShowAll;
                     _visionUnitId = -1;
+                    _firstFogFrame = true;
                     System.Console.WriteLine("Showing sight range for all units.");
                 }
                 else if (int.TryParse(args[1], out int vid))
@@ -621,6 +622,7 @@ public partial class GameScreen
                     {
                         _visionMode = VisionMode.ShowSingle;
                         _visionUnitId = vid;
+                        _firstFogFrame = true;
                         System.Console.WriteLine($"Showing sight range for unit {vid}.");
                     }
                     else

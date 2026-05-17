@@ -275,11 +275,12 @@ public partial class GameScreen
             }
 
             // ---- 1. rtFinal: previous explored (grey) + white circles (current vision) ----
-            // _otherFog was written in step 3 of PREVIOUS frame → safe
+            // _otherFog was written in step 4 of PREVIOUS frame → safe after first frame
             _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
-            spriteBatch.Draw(_otherFog, Vector2.Zero, Color.White); // accumulated explored (grey)
+            if (!_firstFogFrame)
+                spriteBatch.Draw(_otherFog, Vector2.Zero, Color.White); // accumulated explored (grey)
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -331,11 +332,12 @@ public partial class GameScreen
             spriteBatch.End();
 
             // ---- 4. Accumulate explored for NEXT frame: _currFog = _otherFog + grey circles ----
-            // _otherFog was written last in step 4 of PREVIOUS frame → safe
+            // _otherFog was written last in step 4 of PREVIOUS frame → safe after first frame
             _graphicsDevice.SetRenderTarget(_currFog);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
-            spriteBatch.Draw(_otherFog, Vector2.Zero, Color.White); // carry over previous explored
+            if (!_firstFogFrame)
+                spriteBatch.Draw(_otherFog, Vector2.Zero, Color.White); // carry over previous explored
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -352,6 +354,7 @@ public partial class GameScreen
 
             // ---- 5. Ping-pong: swap fog RTs for next frame ----
             (_currFog, _otherFog) = (_otherFog, _currFog);
+            _firstFogFrame = false;
             _graphicsDevice.SetRenderTarget(null);
 
             // ---- 6. UI overlay ----
