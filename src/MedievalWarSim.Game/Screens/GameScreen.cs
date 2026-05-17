@@ -28,31 +28,25 @@ public class GameScreen : IDisposable
     private const float UnitRadius = 16f;
 
     [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-    [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
-    private static readonly uint _processId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
     private static bool IsCtrlHeld()
         => (GetAsyncKeyState(0xA2) & 0x8000) != 0 ||
            (GetAsyncKeyState(0xA3) & 0x8000) != 0;
 
-    private static bool IsClickOnGameWindow()
-    {
-        IntPtr fg = GetForegroundWindow();
-        if (fg == IntPtr.Zero) return false;
-        GetWindowThreadProcessId(fg, out uint pid);
-        return pid == _processId;
-    }
+    private readonly IntPtr _gameWindowHandle;
+
+    private bool IsGameFocused() => GetForegroundWindow() == _gameWindowHandle;
 
     public GameScreen(GraphicsDevice graphicsDevice)
     {
-
+        _gameWindowHandle = FindWindow(null, "MedievalWarSim");
         _entityManager = new EntityManager();
         _shapeRenderer = new ShapeRenderer(graphicsDevice);
         _console = new DevConsole();
@@ -369,7 +363,7 @@ public class GameScreen : IDisposable
         {
             if (args.Length == 0)
             {
-                System.Console.WriteLine("Usage: move <id> <x> <y> | move random");
+                System.Console.WriteLine("Usage: move <id> <x> <y> | move selected <x> <y> | move random");
                 return;
             }
 
@@ -391,9 +385,37 @@ public class GameScreen : IDisposable
                 return;
             }
 
+            if (args[0] == "selected")
+            {
+                if (args.Length < 3)
+                {
+                    System.Console.WriteLine("Usage: move selected <x> <y>");
+                    return;
+                }
+                if (_selectedUnitIds.Count == 0)
+                {
+                    System.Console.WriteLine("No units selected.");
+                    return;
+                }
+                if (!float.TryParse(args[1], out float sx) || !float.TryParse(args[2], out float sy))
+                {
+                    System.Console.WriteLine("Invalid coordinates.");
+                    return;
+                }
+                foreach (int id in _selectedUnitIds)
+                {
+                    ref var move = ref _entityManager.GetMove(id);
+                    move.TargetX = sx;
+                    move.TargetY = sy;
+                    move.IsMoving = true;
+                }
+                System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to ({sx:F0}, {sy:F0}).");
+                return;
+            }
+
             if (args.Length < 3 || !int.TryParse(args[0], out int moveId))
             {
-                System.Console.WriteLine("Usage: move <id> <x> <y> | move random");
+                System.Console.WriteLine("Usage: move <id> <x> <y> | move selected <x> <y> | move random");
                 return;
             }
 
@@ -461,12 +483,12 @@ public class GameScreen : IDisposable
             _console.ExecuteCommand(cmd);
         }
 
-        if (currentMouse.LeftButton == ButtonState.Pressed  &&
-            _prevMouse.LeftButton   == ButtonState.Released)
+        if (IsGameFocused())
         {
-            _isDragging = IsClickOnGameWindow();
-            if (_isDragging)
+            if (currentMouse.LeftButton == ButtonState.Pressed  &&
+                _prevMouse.LeftButton   == ButtonState.Released)
             {
+                _isDragging = true;
                 _dragStartX = currentMouse.X;
                 _dragStartY = currentMouse.Y;
                 _dragEndX   = currentMouse.X;
@@ -485,45 +507,51 @@ public class GameScreen : IDisposable
         if (_isDragging && currentMouse.LeftButton == ButtonState.Released &&
             _prevMouse.LeftButton   == ButtonState.Pressed)
         {
-            int dx = _dragEndX - _dragStartX;
-            int dy = _dragEndY - _dragStartY;
-
-            if (dx * dx + dy * dy < 25)
+            if (IsGameFocused())
             {
-                HandleClick(_dragEndX, _dragEndY, IsCtrlHeld());
-            }
-            else
-            {
-                int minX = Math.Min(_dragStartX, _dragEndX);
-                int maxX = Math.Max(_dragStartX, _dragEndX);
-                int minY = Math.Min(_dragStartY, _dragEndY);
-                int maxY = Math.Max(_dragStartY, _dragEndY);
+                int dx = _dragEndX - _dragStartX;
+                int dy = _dragEndY - _dragStartY;
 
-                if (!IsCtrlHeld())
-                    _selectedUnitIds.Clear();
-
-                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                if (dx * dx + dy * dy < 25)
                 {
-                    if (!_entityManager.IsAlive(i)) continue;
-                    var pos = _entityManager.GetPosition(i);
-                    if (pos.X >= minX && pos.X <= maxX && pos.Y >= minY && pos.Y <= maxY)
-                        _selectedUnitIds.Add(i);
+                    HandleClick(_dragEndX, _dragEndY, IsCtrlHeld());
+                }
+                else
+                {
+                    int minX = Math.Min(_dragStartX, _dragEndX);
+                    int maxX = Math.Max(_dragStartX, _dragEndX);
+                    int minY = Math.Min(_dragStartY, _dragEndY);
+                    int maxY = Math.Max(_dragStartY, _dragEndY);
+
+                    if (!IsCtrlHeld())
+                        _selectedUnitIds.Clear();
+
+                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    {
+                        if (!_entityManager.IsAlive(i)) continue;
+                        var pos = _entityManager.GetPosition(i);
+                        if (pos.X >= minX && pos.X <= maxX && pos.Y >= minY && pos.Y <= maxY)
+                            _selectedUnitIds.Add(i);
+                    }
                 }
             }
 
             _isDragging = false;
         }
 
-        bool rightJustPressed = currentMouse.RightButton == ButtonState.Pressed &&
-                                _prevMouse.RightButton == ButtonState.Released;
-        if (rightJustPressed && IsClickOnGameWindow() && _selectedUnitIds.Count > 0)
+        if (IsGameFocused())
         {
-            foreach (int id in _selectedUnitIds)
+            bool rightJustPressed = currentMouse.RightButton == ButtonState.Pressed &&
+                                    _prevMouse.RightButton == ButtonState.Released;
+            if (rightJustPressed && _selectedUnitIds.Count > 0)
             {
-                ref var move = ref _entityManager.GetMove(id);
-                move.TargetX = currentMouse.X;
-                move.TargetY = currentMouse.Y;
-                move.IsMoving = true;
+                foreach (int id in _selectedUnitIds)
+                {
+                    ref var move = ref _entityManager.GetMove(id);
+                    move.TargetX = currentMouse.X;
+                    move.TargetY = currentMouse.Y;
+                    move.IsMoving = true;
+                }
             }
         }
 
