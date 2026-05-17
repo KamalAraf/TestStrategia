@@ -294,8 +294,8 @@ public partial class GameScreen
             _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
             Matrix viewMatrix = Matrix.CreateScale(WorldFogScale * _camera.Zoom) *
-                                Matrix.CreateTranslation(-_camera.X * _camera.Zoom + w / 2f,
-                                                          -_camera.Y * _camera.Zoom + h / 2f, 0);
+                                Matrix.CreateTranslation(-_camera.X * _camera.Zoom,
+                                                          -_camera.Y * _camera.Zoom, 0);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, null, null, null, null, viewMatrix);
             spriteBatch.Draw(_worldFogRT, Vector2.Zero, new Color(180, 180, 180));
             spriteBatch.End();
