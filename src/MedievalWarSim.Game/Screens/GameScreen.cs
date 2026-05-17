@@ -19,7 +19,6 @@ public class GameScreen : IDisposable
     private MouseState _prevMouse;
     private readonly HashSet<int> _selectedUnitIds = new();
     //private bool _showClick;  // uncomment with showclick command
-    private IntPtr _gameWindowHandle;
     private Viewport _viewport;
     private bool _isDragging;
     private int _dragStartX, _dragStartY;
@@ -32,22 +31,23 @@ public class GameScreen : IDisposable
     private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
+
+    private static readonly uint _processId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
 
     private static bool IsCtrlHeld()
         => (GetAsyncKeyState(0xA2) & 0x8000) != 0 ||
            (GetAsyncKeyState(0xA3) & 0x8000) != 0;
 
-    private bool IsClickOnGameWindow()
+    private static bool IsClickOnGameWindow()
     {
-        if (_gameWindowHandle == IntPtr.Zero)
-        {
-            using var process = System.Diagnostics.Process.GetCurrentProcess();
-            _gameWindowHandle = process.MainWindowHandle;
-        }
-
-        return _gameWindowHandle != IntPtr.Zero &&
-               GetForegroundWindow() == _gameWindowHandle;
+        IntPtr fg = GetForegroundWindow();
+        if (fg == IntPtr.Zero) return false;
+        GetWindowThreadProcessId(fg, out uint pid);
+        return pid == _processId;
     }
 
     public GameScreen(GraphicsDevice graphicsDevice)
@@ -57,9 +57,6 @@ public class GameScreen : IDisposable
         _shapeRenderer = new ShapeRenderer(graphicsDevice);
         _console = new DevConsole();
         _viewport = graphicsDevice.Viewport;
-
-        using var process = System.Diagnostics.Process.GetCurrentProcess();
-        _gameWindowHandle = process.MainWindowHandle;
 
         _entityManager.Create();
         _entityManager.GetPosition(0) = new PositionComponent

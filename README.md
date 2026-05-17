@@ -951,7 +951,13 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **Ctrl+drag / Ctrl+click**: appends to or toggles selection instead of replacing.
 - **ShapeRenderer.DrawRectangle()**: new method with 1x1 pixel texture for filled rectangles + borders (used for selection box rendering).
 - **Selection box visuals**: semi-transparent green fill + lime border drawn during drag.
-- **Crash log**: unhandled exceptions are written to `crash.txt` (overwritten each crash) via try-catch in `Program.cs` + `AppDomain.UnhandledException`.
-- **`create random [count]`**: optional count parameter (>=1) to spawn multiple random units at once (e.g. `create random 10`).
+- **Crash log**: unhandled exceptions written to `crash.txt` via try-catch + `AppDomain.UnhandledException`.
+- **`create random [count]`**: optional count parameter (>=1) to spawn multiple units (e.g. `create random 10`).
+- **Right-click movement**: select units, right-click → all move to that point at 120px/s.
+- **`MoveComponent`** (TargetX, TargetY, Speed, IsMoving) per entity.
+- **`move <id> <x> <y>` / `move random`**: console movement commands.
+- **`info` / `selected`**: coords use `;` separator; `info` shows target + Moving flag.
+- **Focus detection**: checks foreground window PID against our process — no cached handle, works even if console was opened as first action.
+- **DevConsole.Close()**: double-join ensures background thread exits before FreeConsole → Open, fixing `IOException: Handle non valido`.
 
 ### 16/05/2026 — Mouse click detection, focus handling, thread safety
