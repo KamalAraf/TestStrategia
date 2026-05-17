@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MedievalWarSim.Core.Components;
+using MedievalWarSim.Core.Data;
 using MedievalWarSim.Core.Enums;
 using MedievalWarSim.Core.Managers;
 using MedievalWarSim.Rendering.Shapes;
@@ -25,8 +26,6 @@ public class GameScreen : IDisposable
     private int _dragEndX, _dragEndY;
 
     private const float UnitRadius = 16f;
-    private const float PixelsPerMeter = 32f;
-    private const float MoveSpeed = 100f; // ~3.1 m/s
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -66,6 +65,7 @@ public class GameScreen : IDisposable
             Y = _viewport.Height / 2f
         };
         _entityManager.GetUnitType(0) = new UnitTypeComponent { Type = UnitType.Infantry };
+        _entityManager.GetMove(0).Speed = UnitStats.RollSpeed(UnitType.Infantry);
 
         RegisterCommands();
     }
@@ -120,7 +120,7 @@ public class GameScreen : IDisposable
             if (args.Length < 2)
             {
                 System.Console.WriteLine("Usage: set <id|all> <property> <value>");
-                System.Console.WriteLine("Properties: type, selected");
+                System.Console.WriteLine("  Properties: type, selected, speed");
                 return;
             }
 
@@ -190,6 +190,7 @@ public class GameScreen : IDisposable
                         }
                     }
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = newType };
+                    _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(newType);
                     System.Console.WriteLine($"Unit {id} type set to {newType}.");
                     break;
 
@@ -216,17 +217,68 @@ public class GameScreen : IDisposable
                     }
                     break;
 
+                case "speed":
+                    if (args.Length < 3)
+                    {
+                        System.Console.WriteLine("Usage: set <id> speed <value|default>");
+                        return;
+                    }
+                    if (args[2].ToLowerInvariant() == "default")
+                    {
+                        var unitType = _entityManager.GetUnitType(id).Type;
+                        _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(unitType);
+                        System.Console.WriteLine($"Unit {id} speed reset to default ({_entityManager.GetMove(id).Speed:F1}).");
+                    }
+                    else if (float.TryParse(args[2], out float speedVal))
+                    {
+                        _entityManager.GetMove(id).Speed = speedVal;
+                        System.Console.WriteLine($"Unit {id} speed set to {speedVal}.");
+                    }
+                    else
+                    {
+                        System.Console.WriteLine("Usage: set <id> speed <value|default>");
+                    }
+                    break;
+
                 default:
-                    System.Console.WriteLine($"Unknown property: {property}. Available: type, selected");
+                    System.Console.WriteLine($"Unknown property: {property}. Available: type, selected, speed");
                     break;
             }
         });
 
         _console.RegisterCommand("info", args =>
         {
-            if (args.Length == 0 || !int.TryParse(args[0], out int id))
+            if (args.Length == 0)
             {
-                System.Console.WriteLine("Usage: info <id>");
+                System.Console.WriteLine("Usage: info <id> | info selected");
+                return;
+            }
+
+            if (args[0] == "selected")
+            {
+                if (_selectedUnitIds.Count == 0)
+                {
+                    System.Console.WriteLine("No units selected.");
+                }
+                else if (_selectedUnitIds.Count == 1)
+                {
+                    PrintUnitInfo(_selectedUnitIds.First());
+                }
+                else
+                {
+                    System.Console.WriteLine($"Selected units ({_selectedUnitIds.Count}):");
+                    foreach (int sid in _selectedUnitIds.Order())
+                    {
+                        var pos = _entityManager.GetPosition(sid);
+                        System.Console.WriteLine($"  {sid} at ({pos.X:F1};{pos.Y:F1})");
+                    }
+                }
+                return;
+            }
+
+            if (!int.TryParse(args[0], out int id))
+            {
+                System.Console.WriteLine("Usage: info <id> | info selected");
                 return;
             }
             if (!_entityManager.IsAlive(id))
@@ -280,6 +332,7 @@ public class GameScreen : IDisposable
                     if (id < 0) break;
                     _entityManager.GetPosition(id) = new PositionComponent { X = x, Y = y };
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = UnitType.Infantry };
+                    _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(UnitType.Infantry);
                     created++;
                 }
 
@@ -308,6 +361,7 @@ public class GameScreen : IDisposable
             }
             _entityManager.GetPosition(id2) = new PositionComponent { X = x, Y = y };
             _entityManager.GetUnitType(id2) = new UnitTypeComponent { Type = UnitType.Infantry };
+            _entityManager.GetMove(id2).Speed = UnitStats.RollSpeed(UnitType.Infantry);
             System.Console.WriteLine($"Created unit {id2} at ({x:F0}, {y:F0}).");
         });
 
@@ -331,7 +385,6 @@ public class GameScreen : IDisposable
                     ref var move = ref _entityManager.GetMove(id);
                     move.TargetX = Random.Shared.Next(50, _viewport.Width - 50);
                     move.TargetY = Random.Shared.Next(50, _viewport.Height - 50);
-                    move.Speed = MoveSpeed;
                     move.IsMoving = true;
                 }
                 System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to random positions.");
@@ -359,7 +412,6 @@ public class GameScreen : IDisposable
             ref var mv = ref _entityManager.GetMove(moveId);
             mv.TargetX = mx;
             mv.TargetY = my;
-            mv.Speed = MoveSpeed;
             mv.IsMoving = true;
             System.Console.WriteLine($"Unit {moveId} moving to ({mx:F0}, {my:F0}).");
         });
@@ -389,6 +441,7 @@ public class GameScreen : IDisposable
         if (move.IsMoving)
             System.Console.Write($" -> ({move.TargetX:F1};{move.TargetY:F1})");
         System.Console.WriteLine();
+        System.Console.WriteLine($"  Speed:    {move.Speed:F1}");
         System.Console.WriteLine($"  Selected: {_selectedUnitIds.Contains(id)}");
         System.Console.WriteLine($"  Moving:   {move.IsMoving}");
     }
@@ -470,7 +523,6 @@ public class GameScreen : IDisposable
                 ref var move = ref _entityManager.GetMove(id);
                 move.TargetX = currentMouse.X;
                 move.TargetY = currentMouse.Y;
-                move.Speed = MoveSpeed;
                 move.IsMoving = true;
             }
         }
