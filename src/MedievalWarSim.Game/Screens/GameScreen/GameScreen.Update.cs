@@ -75,6 +75,7 @@ public partial class GameScreen
             if (dist < 1f)
             {
                 move.IsMoving = false;
+                move.StuckTimer = 0f;
                 continue;
             }
 
@@ -121,10 +122,19 @@ public partial class GameScreen
 
             // ---- Stuck detection (crowded arrival) ----
             float effectiveSpeed = MathF.Sqrt(vx * vx + vy * vy);
-            if (effectiveSpeed < 0.5f && dist < radius * 4f)
+            if (effectiveSpeed < 1f)
             {
-                move.IsMoving = false;
-                continue;
+                move.StuckTimer += dt;
+                if (move.StuckTimer >= 0.3f)
+                {
+                    move.IsMoving = false;
+                    move.StuckTimer = 0f;
+                    continue;
+                }
+            }
+            else
+            {
+                move.StuckTimer = 0f;
             }
 
             pos.X += vx;

@@ -75,6 +75,7 @@ public partial class GameScreen
                     move.TargetX = wx;
                     move.TargetY = wy;
                     move.IsMoving = true;
+                    move.StuckTimer = 0f;
                 }
             }
         }

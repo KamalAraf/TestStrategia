@@ -272,6 +272,7 @@ public partial class GameScreen
                     move.TargetX = _camera.X + Random.Shared.NextSingle() * vw;
                     move.TargetY = _camera.Y + Random.Shared.NextSingle() * vh;
                     move.IsMoving = true;
+                    move.StuckTimer = 0f;
                 }
                 System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to random positions.");
                 return;
@@ -300,6 +301,7 @@ public partial class GameScreen
                     move.TargetX = sx;
                     move.TargetY = sy;
                     move.IsMoving = true;
+                    move.StuckTimer = 0f;
                 }
                 System.Console.WriteLine($"Moving {_selectedUnitIds.Count} unit(s) to ({sx:F0}, {sy:F0}).");
                 return;
@@ -327,6 +329,7 @@ public partial class GameScreen
             mv.TargetX = mx;
             mv.TargetY = my;
             mv.IsMoving = true;
+            mv.StuckTimer = 0f;
             System.Console.WriteLine($"Unit {moveId} moving to ({mx:F0}, {my:F0}).");
         });
 
