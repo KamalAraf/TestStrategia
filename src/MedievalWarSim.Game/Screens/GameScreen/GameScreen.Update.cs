@@ -254,19 +254,27 @@ public partial class GameScreen
     {
         if (_visionMode != VisionMode.None)
         {
-            // ---- 1. Build fog mask on RT: black = fog, white = revealed ----
+            // ---- 1. Build persistent fog mask on RT ----
+            // Values: 255=visible ora, ~255→0=esplorato (decade), 0=mai visto
             int w = _viewport.Width, h = _viewport.Height;
             if (_fogRT == null || _fogW != w || _fogH != h)
             {
                 _fogRT?.Dispose();
                 _fogRT = new RenderTarget2D(_graphicsDevice, w, h);
                 _fogW = w; _fogH = h;
+                _graphicsDevice.SetRenderTarget(_fogRT);
+                _graphicsDevice.Clear(Color.Black); // init: tutto inesplorato
+                _graphicsDevice.SetRenderTarget(null);
             }
 
             _graphicsDevice.SetRenderTarget(_fogRT);
-            _graphicsDevice.Clear(new Color(100, 100, 100, 255)); // dark grey = fog
 
             spriteBatch.Begin();
+            // Dim tutta l'area esplorata (decade ~2%/frame → memoria ~1-2s)
+            _shapeRenderer.DrawRectangle(spriteBatch, 0, 0, w, h,
+                new Color(0, 0, 0, 5), Color.Transparent, 0f);
+
+            // White circles = currently visible → reset a 255
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -279,7 +287,6 @@ public partial class GameScreen
                     sy + sight < -DrawMargin || sy - sight > h + DrawMargin)
                     continue;
 
-                // White circle = revealed area (no fog)
                 _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
                     Color.White, Color.Transparent);
             }
