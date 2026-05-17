@@ -952,5 +952,6 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **ShapeRenderer.DrawRectangle()**: new method with 1x1 pixel texture for filled rectangles + borders (used for selection box rendering).
 - **Selection box visuals**: semi-transparent green fill + lime border drawn during drag.
 - **Crash log**: unhandled exceptions are written to `crash.txt` (overwritten each crash) via try-catch in `Program.cs` + `AppDomain.UnhandledException`.
+- **`create random [count]`**: optional count parameter (>=1) to spawn multiple random units at once (e.g. `create random 10`).
 
 ### 16/05/2026 — Mouse click detection, focus handling, thread safety

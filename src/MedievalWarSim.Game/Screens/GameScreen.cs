@@ -254,15 +254,35 @@ public class GameScreen : IDisposable
         {
             if (args.Length == 0)
             {
-                System.Console.WriteLine("Usage: create random | create <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] | create <x> <y>");
                 return;
             }
 
             float x, y;
             if (args[0] == "random")
             {
-                x = Random.Shared.Next(50, _viewport.Width  - 50);
-                y = Random.Shared.Next(50, _viewport.Height - 50);
+                int count = 1;
+                if (args.Length >= 2 && (!int.TryParse(args[1], out count) || count < 1))
+                {
+                    System.Console.WriteLine("Invalid count. Usage: create random [count]");
+                    return;
+                }
+
+                int created = 0;
+                for (int n = 0; n < count; n++)
+                {
+                    x = Random.Shared.Next(50, _viewport.Width  - 50);
+                    y = Random.Shared.Next(50, _viewport.Height - 50);
+
+                    int id = _entityManager.Create();
+                    if (id < 0) break;
+                    _entityManager.GetPosition(id) = new PositionComponent { X = x, Y = y };
+                    _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = UnitType.Infantry };
+                    created++;
+                }
+
+                System.Console.WriteLine($"Created {created} unit(s).");
+                return;
             }
             else if (args.Length >= 2)
             {
@@ -274,19 +294,19 @@ public class GameScreen : IDisposable
             }
             else
             {
-                System.Console.WriteLine("Usage: create random | create <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] | create <x> <y>");
                 return;
             }
 
-            int id = _entityManager.Create();
-            if (id < 0)
+            int id2 = _entityManager.Create();
+            if (id2 < 0)
             {
                 System.Console.WriteLine("ERROR: entity limit reached (2000 max).");
                 return;
             }
-            _entityManager.GetPosition(id) = new PositionComponent { X = x, Y = y };
-            _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = UnitType.Infantry };
-            System.Console.WriteLine($"Created unit {id} at ({x:F0}, {y:F0}).");
+            _entityManager.GetPosition(id2) = new PositionComponent { X = x, Y = y };
+            _entityManager.GetUnitType(id2) = new UnitTypeComponent { Type = UnitType.Infantry };
+            System.Console.WriteLine($"Created unit {id2} at ({x:F0}, {y:F0}).");
         });
 
         // showclick — DEBUG ONLY: prints click coords & focus info
