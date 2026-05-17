@@ -330,22 +330,7 @@ public partial class GameScreen
             spriteBatch.Draw(_fogRT, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            // ---- 4. Border solo in ShowSingle (no overlap tra cerchi) ----
-            if (_visionMode == VisionMode.ShowSingle && _entityManager.IsAlive(_visionUnitId))
-            {
-                spriteBatch.Begin();
-                var  pos   = _entityManager.GetPosition(_visionUnitId);
-                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
-                float sight = _entityManager.GetVision(_visionUnitId).SightRange * _camera.Zoom;
-                if (!(sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
-                      sy + sight < -DrawMargin || sy - sight > h + DrawMargin))
-                {
-                    _shapeRenderer.DrawCircleBorder(spriteBatch, sx, sy, sight, 2f, Color.Black);
-                }
-                spriteBatch.End();
-            }
-
-            // ---- 5. UI overlay ----
+            // ---- 4. UI overlay ----
             spriteBatch.Begin();
             if (_isDragging)
             {
