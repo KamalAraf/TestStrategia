@@ -1019,3 +1019,34 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
   - `IsGameFocused()` chiamato una volta sola per frame e passato a `ProcessMouseInput`.
   - `remove all` usa `_selectedUnitIds.Clear()` invece di `Remove(i)` per ogni entità.
   - `type random` genera fresh per ogni entità (single e all consistenti).
+
+### 17/05/2026 — Fog of war persistente (stile StarCraft / War of Dots)
+- **VisionComponent**: per-unità `SightRange` ±5% random. Archer=350, Ballista=320, Cavalry=180, Infantry=150, Medic=150.
+- **`vision unit <id>` / `vision all` / `vision off`**: comando per attivare/disattivare nebbia, singola unità o tutte.
+- **FogBlend statico** (`Zero/SourceColor`): moltiplicazione sul backbuffer. _rtFinal: 255=visibile, 180~0.7=esplorato, 0=inesplorato.
+- **Nessun bordo cerchio**: solo contrasto luminosità tra rivelato (×1) e nebbia (×<1), stile War of Dots.
+
+### 17/05/2026 — Fog of war: iterazioni tecniche
+1. **GPU multi-RT (tentativo)**: 3 RTs (visione + esplorato + combine). Letto dopo scritto → nero (driver bug: read-after-write stesso frame).
+2. **Ping-pong RT**: 2 RTs, scrittura frame N, lettura frame N+1. Fallito per stesso problema GPU.
+3. **CPU low-res 1/3**: accumulo `Color[]` su CPU a 1/3 risoluzione, `SetData` ogni frame. Funzionava ma FPS 3000→300 con 1 unità (SetData stall).
+4. **GPU ping-pong full-res**: 2 RT PreserveContents, accumulo diretto su GPU. FPS ok ma zoom errava (screen-space, non world-space).
+5. **World-space fog RT**: texture 4096×4096, 8 WU/texel, matrice view per proiezione corretta. Limitato a 32768 WU copertura.
+6. **CPU circle list (attuale)**: `List<(wx,wy,radius)>` + deduplica a 50 WU. Nessun limite mondo, nessuna texture GPU, nessun SetData, zoom/pan perfetti.
+
+### 17/05/2026 — Fog of war: implementazione finale (CPU circle list)
+- **Accumulo esplorato**: lista in RAM di `(worldX, worldY, sightRadius)`. Un cerchio per unità ogni 50 WU di movimento (`_lastExploredX/Y`, `MinExploreDist=50f`).
+- **Rendering**: ogni frame itera TUTTI i cerchi esplorati, culla viewport + DrawMargin, disegna su `_rtFinal` con `DrawFilledCircle` (grigio 180), poi disegna cerchi visione correnti (bianco). FogBlend moltiplica.
+- **Performance**: culling bounds `O(N)` sulla lista totale (~1200 cerchi/unità/minuto). Visibili per frame: ~100-300. Skip rapido con 4 confronti float.
+- **Zoom/pan perfetti**: coordinate mondo→schermo ricalcolate ogni frame, nessuna texture da riproiettare.
+- **Nessun limite**: solo float precision e RAM. Per test con zoom 0.125× e movimento prolungato.
+- **FPS**: 2800 base, ~1400 con vision mode attivo (2 extra full-screen quad + N cerchi GPU).
+
+### 17/05/2026 — Fix e bug minori
+- **DevConsole crash AllocConsole+SDL2**: dopo `AllocConsole()` reconnect stdout via `Console.OpenStandardOutput()` + `SafeWrite` con try-catch.
+- **`.gitignore`**: build artifacts esclusi.
+- **`DrawFilledCircle` con `BlendState.Opaque` bug**: il bordo `Color.Transparent` (0,0,0,0) sovrascriveva il fill con Opaque. Fix: usare `AlphaBlend` per cerchi esplorati.
+- **WorldToScreen top-left**: il sistema coordinate Camera ha (X,Y)=mondo al top-left schermo. `WorldToScreen = ((wx - X) * Zoom, ...)`. Nessun offset center aggiunto. La matrice di trasformazione world-fog RT deve corrispondere.
+- **`_firstFogFrame` rimosso**: non più necessario con l'approccio CPU circle list.
+- **`_rtFinal`**: singolo RT per fog mask, creato a viewport size. Clear nero ogni frame, disegnato esplorato + visione, poi moltiplicato su backbuffer via FogBlend.
+- **`RenderTargetUsage.PreserveContents`**: richiesto per l'accumulo GPU (world-fog RT e ping-pong). Non usato nell'approccio finale CPU.
