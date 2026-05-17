@@ -60,6 +60,16 @@ public class ShapeRenderer : IDisposable
         spriteBatch.Draw(_borderTexture, pos, null, bColor, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 
+    public void DrawFilledCircle(SpriteBatch spriteBatch, float x, float y, float radius, Color fillColor, Color borderColor)
+    {
+        float scale = radius / TexRadius;
+        var origin = new Vector2(TexRadius, TexRadius);
+        var pos = new Vector2(x, y);
+
+        spriteBatch.Draw(_fillTexture, pos, null, fillColor, 0f, origin, scale, SpriteEffects.None, 0f);
+        spriteBatch.Draw(_borderTexture, pos, null, borderColor, 0f, origin, scale, SpriteEffects.None, 0f);
+    }
+
     public void DrawRectangle(SpriteBatch spriteBatch, float x, float y, float w, float h, Color fillColor, Color borderColor, float borderWidth = 1f)
     {
         if (w <= 0 || h <= 0) return;

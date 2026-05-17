@@ -252,6 +252,27 @@ public partial class GameScreen
 
     public void Draw(SpriteBatch spriteBatch)
     {
+        // ---- Vision overlay (behind units) ----
+        if (_visionMode != VisionMode.None)
+        {
+            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            {
+                if (!_entityManager.IsAlive(i)) continue;
+                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
+
+                var  pos   = _entityManager.GetPosition(i);
+                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
+                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
+                if (sx + sight < -DrawMargin || sx - sight > _viewport.Width + DrawMargin ||
+                    sy + sight < -DrawMargin || sy - sight > _viewport.Height + DrawMargin)
+                    continue;
+
+                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight,
+                    new Color(0, 0, 0, 50), Color.Black);
+            }
+        }
+
+        // ---- Units ----
         for (int i = 0; i < _entityManager.HighWaterMark; i++)
         {
             if (!_entityManager.IsAlive(i)) continue;
@@ -281,25 +302,6 @@ public partial class GameScreen
                 Color barColor = ratio > 0.6f ? Color.Lime : ratio > 0.3f ? Color.Yellow : Color.Red;
                 _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW, barH, new Color(30, 30, 30, 180), Color.White * 0.4f, 0.5f);
                 _shapeRenderer.DrawRectangle(spriteBatch, barX, barY, barW * ratio, barH, barColor, Color.Transparent, 0f);
-            }
-        }
-
-        // ---- Vision overlay circles ----
-        if (_visionMode != VisionMode.None)
-        {
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
-            {
-                if (!_entityManager.IsAlive(i)) continue;
-                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
-
-                var  pos   = _entityManager.GetPosition(i);
-                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
-                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
-                if (sx + sight < -DrawMargin || sx - sight > _viewport.Width + DrawMargin ||
-                    sy + sight < -DrawMargin || sy - sight > _viewport.Height + DrawMargin)
-                    continue;
-
-                _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sight, Color.White * 0.3f);
             }
         }
 
