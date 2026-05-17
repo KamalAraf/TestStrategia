@@ -256,7 +256,7 @@ public partial class GameScreen
         {
             int w = _viewport.Width, h = _viewport.Height;
 
-            // Ensure fog RT matches viewport
+            // Ensure RT matches viewport
             if (_rtFinal == null || _rtW != w || _rtH != h)
             {
                 _rtFinal?.Dispose();
@@ -264,10 +264,56 @@ public partial class GameScreen
                 _rtW = w; _rtH = h;
             }
 
-            // ---- 1. Build fog mask: white circles on black ----
+            // Ensure explored texture matches viewport at 1/4 scale
+            int ew = w / ExploredScale, eh = h / ExploredScale;
+            if (ew < 1) ew = 1; if (eh < 1) eh = 1;
+            if (_exploredTex == null || _exploredW != ew || _exploredH != eh)
+            {
+                _exploredTex?.Dispose();
+                _exploredTex = new Texture2D(_graphicsDevice, ew, eh);
+                _exploredW = ew; _exploredH = eh;
+                _exploredData = new Color[ew * eh];
+            }
+
+            // ---- 0. Accumulate explored on CPU: mark current vision circles as grey ----
+            Color exploredGrey = new(180, 180, 180, 255);
+            float invScale = 1f / ExploredScale;
+            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            {
+                if (!_entityManager.IsAlive(i)) continue;
+                if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
+                var  pos   = _entityManager.GetPosition(i);
+                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
+                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
+                if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
+                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
+
+                int csx = (int)(sx * invScale);
+                int csy = (int)(sy * invScale);
+                int rs  = (int)(sight * invScale) + 1;
+                int rs2 = rs * rs;
+                for (int dy = -rs; dy <= rs; dy++)
+                {
+                    int py = csy + dy;
+                    if (py < 0 || py >= eh) continue;
+                    int dy2 = dy * dy;
+                    int rowStart = py * ew;
+                    int maxDx = (int)MathF.Sqrt(rs2 - dy2);
+                    int x0 = Math.Max(0, csx - maxDx);
+                    int x1 = Math.Min(ew - 1, csx + maxDx);
+                    for (int px = x0; px <= x1; px++)
+                        _exploredData[rowStart + px] = exploredGrey;
+                }
+            }
+
+            // Upload explored data to GPU
+            _exploredTex.SetData(_exploredData);
+
+            // ---- 1. Build fog mask: explored grey + white circles ----
             _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
+            spriteBatch.Draw(_exploredTex, new Rectangle(0, 0, w, h), Color.White);
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -313,7 +359,7 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 3. Apply fog multiply: white=visible, black=hidden ----
+            // ---- 3. Apply fog multiply: white=visible, grey=explored, black=unexplored ----
             spriteBatch.Begin(SpriteSortMode.Deferred, FogBlend);
             spriteBatch.Draw(_rtFinal, Vector2.Zero, Color.White);
             spriteBatch.End();

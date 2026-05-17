@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MedievalWarSim.Core;
@@ -44,7 +45,11 @@ public partial class GameScreen : IDisposable
     private int _visionUnitId = -1;
 
     private RenderTarget2D? _rtFinal;
-    
+    private Texture2D? _exploredTex;
+    private Color[]? _exploredData;
+    private int _exploredW, _exploredH;
+    private const int ExploredScale = 4;
+
     private int _rtW, _rtH;
     private static readonly BlendState FogBlend = new()
     {
@@ -106,5 +111,6 @@ public partial class GameScreen : IDisposable
     {
         _shapeRenderer.Dispose();
         _rtFinal?.Dispose();
+        _exploredTex?.Dispose();
     }
 }
