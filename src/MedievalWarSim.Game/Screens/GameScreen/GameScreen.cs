@@ -43,12 +43,10 @@ public partial class GameScreen : IDisposable
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
-    private bool _firstFogFrame;
-
+    private const int WorldFogSize = 4096;
+    private const float WorldFogScale = 2f;
     private RenderTarget2D? _rtFinal;
-    private Texture2D? _exploredTex;
-    private Color[]? _exploredData;
-    private int _exploredW, _exploredH;
+    private RenderTarget2D? _worldFogRT;
     private int _rtW, _rtH;
     private static readonly BlendState FogBlend = new()
     {
@@ -110,6 +108,6 @@ public partial class GameScreen : IDisposable
     {
         _shapeRenderer.Dispose();
         _rtFinal?.Dispose();
-        _exploredTex?.Dispose();
+        _worldFogRT?.Dispose();
     }
 }

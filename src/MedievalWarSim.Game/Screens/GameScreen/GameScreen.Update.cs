@@ -256,56 +256,50 @@ public partial class GameScreen
         {
             int w = _viewport.Width, h = _viewport.Height;
 
-            // Ensure RT + explored texture match viewport
+            // Ensure RTs match viewport size
             if (_rtFinal == null || _rtW != w || _rtH != h)
             {
                 _rtFinal?.Dispose();
                 _rtFinal = new RenderTarget2D(_graphicsDevice, w, h);
                 _rtW = w; _rtH = h;
-                int ew = Math.Max(1, w / 3), eh = Math.Max(1, h / 3);
-                _exploredTex?.Dispose();
-                _exploredTex = new Texture2D(_graphicsDevice, ew, eh);
-                _exploredW = ew; _exploredH = eh;
-                _exploredData = new Color[ew * eh];
             }
 
-            // ---- 0. Accumulate explored on CPU (1/3 res) ----
-            Color exploredGrey = new(180, 180, 180, 255);
-            float invScale = 1f / 3f;
+            // Create world-space fog RT once (never cleared — accumulates explored)
+            if (_worldFogRT == null)
+            {
+                _worldFogRT = new RenderTarget2D(_graphicsDevice, WorldFogSize, WorldFogSize,
+                    false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+                _graphicsDevice.SetRenderTarget(_worldFogRT);
+                _graphicsDevice.Clear(Color.Black);
+                _graphicsDevice.SetRenderTarget(null);
+            }
+
+            // ---- A. Accumulate explored (white circles) on world-space fog RT ----
+            _graphicsDevice.SetRenderTarget(_worldFogRT);
+            spriteBatch.Begin();
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
                 if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
                 var  pos   = _entityManager.GetPosition(i);
-                var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
-                float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
-                if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
-                    sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
-
-                int csx = (int)(sx * invScale);
-                int csy = (int)(sy * invScale);
-                int rs  = (int)(sight * invScale);
-                int rs2 = rs * rs;
-                int y0 = Math.Max(0, csy - rs);
-                int y1 = Math.Min(_exploredH - 1, csy + rs);
-                for (int dy = y0 - csy; dy <= y1 - csy; dy++)
-                {
-                    int dy2 = dy * dy;
-                    int dxMax = (int)MathF.Sqrt(Math.Max(0, rs2 - dy2));
-                    int x0 = Math.Max(0, csx - dxMax);
-                    int x1 = Math.Min(_exploredW - 1, csx + dxMax);
-                    int rowStart = (csy + dy) * _exploredW;
-                    for (int px = x0; px <= x1; px++)
-                        _exploredData[rowStart + px] = exploredGrey;
-                }
+                float sight = _entityManager.GetVision(i).SightRange;
+                float tx = pos.X / WorldFogScale;
+                float ty = pos.Y / WorldFogScale;
+                float tr = sight / WorldFogScale;
+                _shapeRenderer.DrawFilledCircle(spriteBatch, tx, ty, tr, Color.White, Color.Transparent);
             }
-            _exploredTex.SetData(_exploredData);
+            spriteBatch.End();
 
-            // ---- 1. Fog mask: explored grey (1/3 res) + white circles (full res) ----
+            // ---- B. Build final fog mask on _rtFinal ----
             _graphicsDevice.SetRenderTarget(_rtFinal);
             _graphicsDevice.Clear(Color.Black);
+            Matrix viewMatrix = Matrix.CreateScale(WorldFogScale * _camera.Zoom) *
+                                Matrix.CreateTranslation(-_camera.X * _camera.Zoom + w / 2f,
+                                                          -_camera.Y * _camera.Zoom + h / 2f, 0);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, null, null, null, null, viewMatrix);
+            spriteBatch.Draw(_worldFogRT, Vector2.Zero, new Color(180, 180, 180));
+            spriteBatch.End();
             spriteBatch.Begin();
-            spriteBatch.Draw(_exploredTex, new Rectangle(0, 0, w, h), Color.White);
             for (int i = 0; i < _entityManager.HighWaterMark; i++)
             {
                 if (!_entityManager.IsAlive(i)) continue;
@@ -319,7 +313,7 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 2. Draw units onto backbuffer ----
+            // ---- C. Draw units onto backbuffer ----
             _graphicsDevice.SetRenderTarget(null);
             _graphicsDevice.Clear(new Color(30, 30, 30));
             spriteBatch.Begin();
@@ -351,12 +345,12 @@ public partial class GameScreen
             }
             spriteBatch.End();
 
-            // ---- 3. Apply fog multiply: white=visible, grey=explored, black=unexplored ----
+            // ---- D. Apply fog multiply: white=visible, grey=explored, black=unexplored ----
             spriteBatch.Begin(SpriteSortMode.Deferred, FogBlend);
             spriteBatch.Draw(_rtFinal, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            // ---- 4. UI overlay ----
+            // ---- E. UI overlay ----
             spriteBatch.Begin();
             if (_isDragging)
             {
