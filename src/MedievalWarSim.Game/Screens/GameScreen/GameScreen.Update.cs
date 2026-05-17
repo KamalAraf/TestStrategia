@@ -46,8 +46,9 @@ public partial class GameScreen
             if (!move.IsMoving) continue;
 
             ref var pos = ref _entityManager.GetPosition(i);
+            float radius = GetUnitRadius(_entityManager.GetUnitType(i).Type);
             var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
-            float sr = UnitRadius * _camera.Zoom;
+            float sr = radius * _camera.Zoom;
             if (sx + sr < -FarMargin || sx - sr > _viewport.Width + FarMargin ||
                 sy + sr < -FarMargin || sy - sr > _viewport.Height + FarMargin)
             {
@@ -93,14 +94,16 @@ public partial class GameScreen
         for (int i = 0; i < _entityManager.HighWaterMark; i++)
         {
             if (!_entityManager.IsAlive(i)) continue;
-            var    pos         = _entityManager.GetPosition(i);
-            var   (sx, sy)   = _camera.WorldToScreen(pos.X, pos.Y);
-            float  sr         = UnitRadius * _camera.Zoom;
+            var    pos      = _entityManager.GetPosition(i);
+            var   (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
+            var    type     = _entityManager.GetUnitType(i).Type;
+            float  radius   = GetUnitRadius(type);
+            float  sr       = radius * _camera.Zoom;
             if (sx + sr < -DrawMargin || sx - sr > _viewport.Width + DrawMargin ||
                 sy + sr < -DrawMargin || sy - sr > _viewport.Height + DrawMargin)
                 continue;
 
-            int    sides       = UnitTypeToSides(_entityManager.GetUnitType(i).Type);
+            int    sides       = UnitTypeToSides(type);
             ref var move       = ref _entityManager.GetMove(i);
             float  rotation    = move.FacingAngle;
             Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;

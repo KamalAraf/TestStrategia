@@ -30,7 +30,6 @@ public partial class GameScreen : IDisposable
     private int _frameCount;
     private double _elapsedFpsTime;
     private int _fps;
-    private const float UnitRadius = 16f;
     private const float DrawMargin = 200f;
     private const float FarMargin = 400f;
     private const int FarUpdateInterval = 5;
@@ -52,6 +51,8 @@ public partial class GameScreen : IDisposable
     private readonly IntPtr _gameWindowHandle;
 
     private bool IsGameFocused() => GetForegroundWindow() == _gameWindowHandle;
+
+    private static float GetUnitRadius(UnitType type) => UnitStats.GetBaseRadius(type);
 
     public GameScreen(GraphicsDevice graphicsDevice, SpriteFont font)
     {

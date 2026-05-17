@@ -245,11 +245,10 @@ public partial class GameScreen
         {
             if (args.Length == 0)
             {
-                System.Console.WriteLine("Usage: create random [count] | create <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] | create <type> <x> <y>");
                 return;
             }
 
-            float x, y;
             if (args[0] == "random")
             {
                 int count = 1;
@@ -264,12 +263,12 @@ public partial class GameScreen
                 {
                     float vw = _viewport.Width / _camera.Zoom;
                     float vh = _viewport.Height / _camera.Zoom;
-                    x = _camera.X + Random.Shared.NextSingle() * vw;
-                    y = _camera.Y + Random.Shared.NextSingle() * vh;
+                    float rx = _camera.X + Random.Shared.NextSingle() * vw;
+                    float ry = _camera.Y + Random.Shared.NextSingle() * vh;
 
                     int id = _entityManager.Create();
                     if (id < 0) break;
-                    _entityManager.GetPosition(id) = new PositionComponent { X = x, Y = y };
+                    _entityManager.GetPosition(id) = new PositionComponent { X = rx, Y = ry };
                     var rt = (UnitType)Random.Shared.Next(5);
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = rt };
                     _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(rt);
@@ -279,31 +278,45 @@ public partial class GameScreen
                 System.Console.WriteLine($"Created {created} unit(s).");
                 return;
             }
-            else if (args.Length >= 2)
+
+            UnitType parsedType;
+            if (int.TryParse(args[0], out int typeInt))
             {
-                if (!float.TryParse(args[0], out x) || !float.TryParse(args[1], out y))
+                if (!Enum.IsDefined(typeof(UnitType), typeInt))
                 {
-                    System.Console.WriteLine("Invalid coordinates.");
+                    System.Console.WriteLine($"Invalid type id: {typeInt}. Valid: 0=Infantry, 1=Archer, 2=Cavalry, 3=Ballista, 4=Medic");
                     return;
                 }
+                parsedType = (UnitType)typeInt;
             }
-            else
+            else if (!Enum.TryParse(args[0], true, out parsedType))
             {
-                System.Console.WriteLine("Usage: create random [count] | create <x> <y>");
+                System.Console.WriteLine($"Unknown type: {args[0]}. Valid: Infantry, Archer, Cavalry, Ballista, Medic");
                 return;
             }
 
-            int id2 = _entityManager.Create();
-            if (id2 < 0)
+            if (args.Length < 3)
+            {
+                System.Console.WriteLine("Usage: create random [count] | create <type> <x> <y>");
+                return;
+            }
+
+            if (!float.TryParse(args[1], out float cx) || !float.TryParse(args[2], out float cy))
+            {
+                System.Console.WriteLine("Invalid coordinates.");
+                return;
+            }
+
+            int newId = _entityManager.Create();
+            if (newId < 0)
             {
                 System.Console.WriteLine("ERROR: entity limit reached (100000 max).");
                 return;
             }
-            var rt2 = (UnitType)Random.Shared.Next(5);
-            _entityManager.GetPosition(id2) = new PositionComponent { X = x, Y = y };
-            _entityManager.GetUnitType(id2) = new UnitTypeComponent { Type = rt2 };
-            _entityManager.GetMove(id2).Speed = UnitStats.RollSpeed(rt2);
-            System.Console.WriteLine($"Created unit {id2} at ({x:F0}, {y:F0}).");
+            _entityManager.GetPosition(newId) = new PositionComponent { X = cx, Y = cy };
+            _entityManager.GetUnitType(newId) = new UnitTypeComponent { Type = parsedType };
+            _entityManager.GetMove(newId).Speed = UnitStats.RollSpeed(parsedType);
+            System.Console.WriteLine($"Created {parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
         });
 
         _console.RegisterCommand("move", args =>

@@ -86,10 +86,12 @@ public partial class GameScreen
         for (int i = 0; i < _entityManager.HighWaterMark; i++)
         {
             if (!_entityManager.IsAlive(i)) continue;
-            var   pos = _entityManager.GetPosition(i);
-            float dx  = mouseX - pos.X;
-            float dy  = mouseY - pos.Y;
-            if (dx * dx + dy * dy <= UnitRadius * UnitRadius)
+            var   pos    = _entityManager.GetPosition(i);
+            var   type   = _entityManager.GetUnitType(i).Type;
+            float r      = GetUnitRadius(type);
+            float dx     = mouseX - pos.X;
+            float dy     = mouseY - pos.Y;
+            if (dx * dx + dy * dy <= r * r)
             {
                 clickedUnit = i;
                 break;
