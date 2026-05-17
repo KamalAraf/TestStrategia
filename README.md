@@ -945,7 +945,7 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 **Known issues:**
 - First click on the game window after focusing the console is always ignored (`GetForegroundWindow()` still returns the console window handle during that frame)
 
-### 17/05/2026
+### 17/05/2026 — Refactor + camera + culling + unit speed + movement + selection
 
 - **Drag-to-select**: hold left button on game window → drag a selection rectangle → release to select all units inside. Small drags (<5px) register as clicks (unit toggle).
 - **Ctrl+drag / Ctrl+click**: appends to or toggles selection instead of replacing.
@@ -953,19 +953,32 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **Selection box visuals**: semi-transparent green fill + lime border drawn during drag.
 - **Crash log**: unhandled exceptions written to `crash.txt` via try-catch + `AppDomain.UnhandledException`.
 - **`create random [count]`**: optional count parameter (>=1) to spawn multiple units (e.g. `create random 10`).
-- **Right-click movement**: select units, right-click → all move to that point at 120px/s.
+- **Right-click movement**: select units, right-click → all move to that point.
 - **`MoveComponent`** (TargetX, TargetY, Speed, IsMoving) per entity.
 - **`move <id> <x> <y>` / `move random`**: console movement commands.
 - **`info` / `selected`**: coords use `;` separator; `info` shows target + Moving flag.
 - **Focus detection**: checks foreground window PID against our process — no cached handle, works even if console was opened as first action.
 - **DevConsole.Close()**: double-join ensures background thread exits before FreeConsole → Open, fixing `IOException: Handle non valido`.
-- **Per-unit speed by type**: `Core/Data/UnitStats.cs` with dictionary-based unit stats (speed). Infantry=100, Archer=95, Cavalry=175, Ballista=50, Medic=100 px/s. ±5% random variance on creation. Speed is a per-instance value in `MoveComponent.Speed`, not a constant — ready for stamina/buff modifications.
-- **`set speed <value|default>`**: console command to set or reset speed. `set <id> speed 200`, `set <id> speed default`.
-- **`info` now shows speed**: unit info panel displays current Speed value.
-- **`info selected`**: shows info for single selection, lists all if multiple, "No units selected." if none.
+- **Per-unit speed by type**: `Core/Data/UnitStats.cs` with dictionary-based unit stats (speed). Infantry=100, Archer=95, Cavalry=175, Ballista=50, Medic=100 px/s. ±5% random variance on creation.
+- **`set speed <value|default>`**: console command to set or reset speed.
+- **`info selected`**: shows info for single selection, lists all if multiple.
 - **`move selected <x> <y>`**: moves all selected units to specified coordinates.
 - **`set type` now recalculates speed**: changing unit type resets speed via `UnitStats.RollSpeed(newType)`.
-- **HWND-based focus detection**: `FindWindow("MedievalWarSim")` gets the real Win32 HWND, compared with `GetForegroundWindow()` — properly distinguishes game window from AllocConsole window (same PID but different HWND). Clicking the game window while console is open now works.
-- **Removed unused code**: PID-based focus check, `RestoreGameWindow`, `_consoleWasOpen`, `SetForegroundWindow`/`FindWindow` P/Invokes (consolidated).
-
-### 16/05/2026 — Mouse click detection, focus handling, thread safety
+- **HWND-based focus detection**: `FindWindow("MedievalWarSim")` + `GetForegroundWindow()` — works with both AllocConsole open.
+- **Removed unused code**: PID-based focus check, `RestoreGameWindow`, `_consoleWasOpen` etc.
+- **Refactored GameScreen.cs** (622 lines → 4 partial files in `Screens/GameScreen/`):
+  - `GameScreen.cs` — fields, constructor, Dispose, P/Invokes
+  - `GameScreen.Commands.cs` — RegisterCommands
+  - `GameScreen.Input.cs` — ProcessMouseInput, HandleClick
+  - `GameScreen.Update.cs` — Update, Draw, PrintUnitInfo
+- **Camera system extracted**:
+  - `Core/Camera.cs` — pure state (X, Y, Zoom) + transforms (ScreenToWorld, WorldToScreen). No MonoGame dependency.
+  - `Game/CameraController.cs` — WASD pan, middle-mouse drag, scroll zoom with zoom-towards-mouse (world point under cursor stays fixed).
+- **Zoom limits**: Min=0.25x (fully zoomed in), Max=4x (fully zoomed out). Scroll up = zoom in (×1.1), scroll down = zoom out (×0.9).
+- **Debug overlay** (SpriteFont via content pipeline): FPS counter top-right, zoom level bottom-right.
+- **`zoom` command**: shows current zoom + limits in console.
+- **Culling system** (3 zones):
+  - **Visible** (≤200px outside viewport): draw + update every frame.
+  - **Intermediate** (200-400px outside): skip draw, update every frame.
+  - **Far** (≥400px outside): skip draw, update every 5th frame.
+- **Bug fixes**: removed duplicate `float dt` in Update; fixed namespace conflict `MedievalWarSim.Game` ↔ `Game` class (Game1.cs now uses fully qualified `Microsoft.Xna.Framework.Game`); cleaned up unused usings.

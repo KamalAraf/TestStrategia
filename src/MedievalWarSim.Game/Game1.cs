@@ -5,7 +5,7 @@ using MedievalWarSim.Screens;
 
 namespace MedievalWarSim;
 
-public class Game1 : Game
+public class Game1 : Microsoft.Xna.Framework.Game
 {
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
@@ -29,7 +29,8 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _gameScreen = new GameScreen(GraphicsDevice);
+        var font = Content.Load<SpriteFont>("DebugFont");
+        _gameScreen = new GameScreen(GraphicsDevice, font);
     }
 
     protected override void UnloadContent()

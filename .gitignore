@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstats
+*.userprefs
+.vs/
+*.DotSettings
+.vscode/
+crash.txt
+*.mgstats
+*.mgcontent
