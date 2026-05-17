@@ -21,6 +21,9 @@ public class GameScreen : IDisposable
     //private bool _showClick;  // uncomment with showclick command
     private IntPtr _gameWindowHandle;
     private Viewport _viewport;
+    private bool _isDragging;
+    private int _dragStartX, _dragStartY;
+    private int _dragEndX, _dragEndY;
 
     private const float UnitRadius = 16f;
 
@@ -328,16 +331,52 @@ public class GameScreen : IDisposable
         if (currentMouse.LeftButton == ButtonState.Pressed  &&
             _prevMouse.LeftButton   == ButtonState.Released)
         {
-            bool onGame = IsClickOnGameWindow();
-            //if (_showClick && onGame)
-            //{
-            //    string time = DateTime.Now.ToString("HH:mm:ss.fff");
-            //    System.Console.WriteLine($"[{time}] Click at ({currentMouse.X},{currentMouse.Y}) hwnd={_gameWindowHandle:X}");
-            //}
-            if (onGame)
+            _isDragging = IsClickOnGameWindow();
+            if (_isDragging)
             {
-                HandleClick(currentMouse.X, currentMouse.Y, IsCtrlHeld());
+                _dragStartX = currentMouse.X;
+                _dragStartY = currentMouse.Y;
+                _dragEndX   = currentMouse.X;
+                _dragEndY   = currentMouse.Y;
             }
+        }
+
+        if (_isDragging && currentMouse.LeftButton == ButtonState.Pressed)
+        {
+            _dragEndX = currentMouse.X;
+            _dragEndY = currentMouse.Y;
+        }
+
+        if (_isDragging && currentMouse.LeftButton == ButtonState.Released &&
+            _prevMouse.LeftButton   == ButtonState.Pressed)
+        {
+            int dx = _dragEndX - _dragStartX;
+            int dy = _dragEndY - _dragStartY;
+
+            if (dx * dx + dy * dy < 25)
+            {
+                HandleClick(_dragEndX, _dragEndY, IsCtrlHeld());
+            }
+            else
+            {
+                int minX = Math.Min(_dragStartX, _dragEndX);
+                int maxX = Math.Max(_dragStartX, _dragEndX);
+                int minY = Math.Min(_dragStartY, _dragEndY);
+                int maxY = Math.Max(_dragStartY, _dragEndY);
+
+                if (!IsCtrlHeld())
+                    _selectedUnitIds.Clear();
+
+                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                {
+                    if (!_entityManager.IsAlive(i)) continue;
+                    var pos = _entityManager.GetPosition(i);
+                    if (pos.X >= minX && pos.X <= maxX && pos.Y >= minY && pos.Y <= maxY)
+                        _selectedUnitIds.Add(i);
+                }
+            }
+
+            _isDragging = false;
         }
 
         _prevKeyboard = currentKey;
@@ -387,6 +426,18 @@ public class GameScreen : IDisposable
             var    pos         = _entityManager.GetPosition(i);
             Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
             _shapeRenderer.DrawCircle(spriteBatch, pos.X, pos.Y, UnitRadius, borderColor);
+        }
+
+        if (_isDragging)
+        {
+            int x1 = _dragStartX, y1 = _dragStartY;
+            int x2 = _dragEndX,   y2 = _dragEndY;
+            float rx = Math.Min(x1, x2);
+            float ry = Math.Min(y1, y2);
+            float rw = Math.Abs(x2 - x1);
+            float rh = Math.Abs(y2 - y1);
+            if (rw > 2 || rh > 2)
+                _shapeRenderer.DrawRectangle(spriteBatch, rx, ry, rw, rh, new Color(0, 120, 0, 60), Color.LimeGreen, 1.5f);
         }
     }
 

@@ -7,6 +7,7 @@ public class ShapeRenderer : IDisposable
 {
     private readonly Texture2D _fillTexture;
     private readonly Texture2D _borderTexture;
+    private readonly Texture2D _pixel;
     private const int TexRadius = 64;
     private const int TexDiameter = TexRadius * 2;
     private const float BorderPixels = 12f;
@@ -15,6 +16,8 @@ public class ShapeRenderer : IDisposable
     {
         _fillTexture = CreateFillTexture(graphicsDevice);
         _borderTexture = CreateBorderTexture(graphicsDevice);
+        _pixel = new Texture2D(graphicsDevice, 1, 1);
+        _pixel.SetData(new[] { Color.White });
     }
 
     private static Texture2D CreateFillTexture(GraphicsDevice gd)
@@ -111,9 +114,22 @@ public class ShapeRenderer : IDisposable
         spriteBatch.Draw(_borderTexture, pos, null, bColor, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 
+    public void DrawRectangle(SpriteBatch spriteBatch, float x, float y, float w, float h, Color fillColor, Color borderColor, float borderWidth = 1f)
+    {
+        if (w <= 0 || h <= 0) return;
+
+        spriteBatch.Draw(_pixel, new Vector2(x, y), null, fillColor, 0f, Vector2.Zero, new Vector2(w, h), SpriteEffects.None, 0f);
+
+        spriteBatch.Draw(_pixel, new Vector2(x, y), null, borderColor, 0f, Vector2.Zero, new Vector2(w, borderWidth), SpriteEffects.None, 0f);
+        spriteBatch.Draw(_pixel, new Vector2(x, y + h - borderWidth), null, borderColor, 0f, Vector2.Zero, new Vector2(w, borderWidth), SpriteEffects.None, 0f);
+        spriteBatch.Draw(_pixel, new Vector2(x, y), null, borderColor, 0f, Vector2.Zero, new Vector2(borderWidth, h), SpriteEffects.None, 0f);
+        spriteBatch.Draw(_pixel, new Vector2(x + w - borderWidth, y), null, borderColor, 0f, Vector2.Zero, new Vector2(borderWidth, h), SpriteEffects.None, 0f);
+    }
+
     public void Dispose()
     {
         _fillTexture.Dispose();
         _borderTexture.Dispose();
+        _pixel.Dispose();
     }
 }

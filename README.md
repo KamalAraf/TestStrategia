@@ -944,3 +944,12 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 
 **Known issues:**
 - First click on the game window after focusing the console is always ignored (`GetForegroundWindow()` still returns the console window handle during that frame)
+
+### 17/05/2026
+
+- **Drag-to-select**: hold left button on game window → drag a selection rectangle → release to select all units inside. Small drags (<5px) register as clicks (unit toggle).
+- **Ctrl+drag / Ctrl+click**: appends to or toggles selection instead of replacing.
+- **ShapeRenderer.DrawRectangle()**: new method with 1x1 pixel texture for filled rectangles + borders (used for selection box rendering).
+- **Selection box visuals**: semi-transparent green fill + lime border drawn during drag.
+
+### 16/05/2026 — Mouse click detection, focus handling, thread safety
