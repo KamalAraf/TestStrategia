@@ -19,14 +19,11 @@ public partial class GameScreen
 
             if (args[0] == "all")
             {
-                int count = 0;
-                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                var active = _entityManager.ActiveEntities;
+                int count = active.Length;
+                for (int i = count - 1; i >= 0; i--)
                 {
-                    if (_entityManager.IsAlive(i))
-                    {
-                        _entityManager.Destroy(i);
-                        count++;
-                    }
+                    _entityManager.Destroy(active[i]);
                 }
                 _selectedUnitIds.Clear();
                 System.Console.WriteLine($"Removed {count} unit(s).");
@@ -121,9 +118,8 @@ public partial class GameScreen
             if (args[0] == "all")
             {
                 _selectedUnitIds.Clear();
-                for (int i = 0; i < _entityManager.HighWaterMark; i++)
-                    if (_entityManager.IsAlive(i))
-                        _selectedUnitIds.Add(i);
+                foreach (int i in _entityManager.ActiveEntities)
+                    _selectedUnitIds.Add(i);
                 System.Console.WriteLine($"Selected {_selectedUnitIds.Count} unit(s).");
                 return;
             }
@@ -194,6 +190,8 @@ public partial class GameScreen
 
                     int id = _entityManager.Create();
                     if (id < 0) break;
+                    _lastExploredX[id] = -1000000f;
+                    _lastExploredY[id] = -1000000f;
                     _entityManager.GetPosition(id) = new PositionComponent { X = rx, Y = ry };
                     var rt = (UnitType)Random.Shared.Next(5);
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = rt };
@@ -242,6 +240,8 @@ public partial class GameScreen
                 System.Console.WriteLine("ERROR: entity limit reached (100000 max).");
                 return;
             }
+            _lastExploredX[newId] = -1000000f;
+            _lastExploredY[newId] = -1000000f;
             _entityManager.GetPosition(newId) = new PositionComponent { X = cx, Y = cy };
             _entityManager.GetUnitType(newId) = new UnitTypeComponent { Type = parsedType };
             _entityManager.GetMove(newId).Speed = UnitStats.RollSpeed(parsedType);
@@ -381,9 +381,8 @@ public partial class GameScreen
                 if (targetArg == "all")
                 {
                     int count = 0;
-                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    foreach (int i in _entityManager.ActiveEntities)
                     {
-                        if (!_entityManager.IsAlive(i)) continue;
                         ApplyType(i, (UnitType)Random.Shared.Next(5));
                         count++;
                     }
@@ -414,9 +413,8 @@ public partial class GameScreen
             if (targetArg == "all")
             {
                 int count = 0;
-                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                foreach (int i in _entityManager.ActiveEntities)
                 {
-                    if (!_entityManager.IsAlive(i)) continue;
                     ApplyType(i, newType.Value);
                     count++;
                 }
@@ -454,9 +452,8 @@ public partial class GameScreen
                 if (targetArg == "all")
                 {
                     int count = 0;
-                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    foreach (int i in _entityManager.ActiveEntities)
                     {
-                        if (!_entityManager.IsAlive(i)) continue;
                         var ut = _entityManager.GetUnitType(i).Type;
                         _entityManager.GetMove(i).Speed = UnitStats.RollSpeed(ut);
                         count++;
@@ -485,9 +482,8 @@ public partial class GameScreen
             if (targetArg == "all")
             {
                 int count = 0;
-                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                foreach (int i in _entityManager.ActiveEntities)
                 {
-                    if (!_entityManager.IsAlive(i)) continue;
                     _entityManager.GetMove(i).Speed = val;
                     count++;
                 }
@@ -557,12 +553,11 @@ public partial class GameScreen
 
             if (targetArg == "all")
             {
-                int count = 0;
-                for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                var active = _entityManager.ActiveEntities;
+                int count = active.Length;
+                for (int i = count - 1; i >= 0; i--)
                 {
-                    if (!_entityManager.IsAlive(i)) continue;
-                    ApplyHealth(i, amount, op);
-                    count++;
+                    ApplyHealth(active[i], amount, op);
                 }
                 System.Console.WriteLine($"Applied health {op} {amount} to {count} unit(s).");
             }

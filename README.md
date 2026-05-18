@@ -1034,19 +1034,25 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 5. **World-space fog RT**: texture 4096×4096, 8 WU/texel, matrice view per proiezione corretta. Limitato a 32768 WU copertura.
 6. **CPU circle list (attuale)**: `List<(wx,wy,radius)>` + deduplica a 50 WU. Nessun limite mondo, nessuna texture GPU, nessun SetData, zoom/pan perfetti.
 
-### 17/05/2026 — Fog of war: implementazione finale (CPU circle list)
-- **Accumulo esplorato**: lista in RAM di `(worldX, worldY, sightRadius)`. Un cerchio per unità ogni 50 WU di movimento (`_lastExploredX/Y`, `MinExploreDist=50f`).
-- **Rendering**: ogni frame itera TUTTI i cerchi esplorati, culla viewport + DrawMargin, disegna su `_rtFinal` con `DrawFilledCircle` (grigio 180), poi disegna cerchi visione correnti (bianco). FogBlend moltiplica.
-- **Performance**: culling bounds `O(N)` sulla lista totale (~1200 cerchi/unità/minuto). Visibili per frame: ~100-300. Skip rapido con 4 confronti float.
-- **Zoom/pan perfetti**: coordinate mondo→schermo ricalcolate ogni frame, nessuna texture da riproiettare.
-- **Nessun limite**: solo float precision e RAM. Per test con zoom 0.125× e movimento prolungato.
-- **FPS**: 2800 base, ~1400 con vision mode attivo (2 extra full-screen quad + N cerchi GPU).
+### 18/05/2026 — Ottimizzazioni Core + Scala Ultra-HD (1m = 40px)
 
-### 17/05/2026 — Fix e bug minori
-- **DevConsole crash AllocConsole+SDL2**: dopo `AllocConsole()` reconnect stdout via `Console.OpenStandardOutput()` + `SafeWrite` con try-catch.
-- **`.gitignore`**: build artifacts esclusi.
-- **`DrawFilledCircle` con `BlendState.Opaque` bug**: il bordo `Color.Transparent` (0,0,0,0) sovrascriveva il fill con Opaque. Fix: usare `AlphaBlend` per cerchi esplorati.
-- **WorldToScreen top-left**: il sistema coordinate Camera ha (X,Y)=mondo al top-left schermo. `WorldToScreen = ((wx - X) * Zoom, ...)`. Nessun offset center aggiunto. La matrice di trasformazione world-fog RT deve corrispondere.
-- **`_firstFogFrame` rimosso**: non più necessario con l'approccio CPU circle list.
-- **`_rtFinal`**: singolo RT per fog mask, creato a viewport size. Clear nero ogni frame, disegnato esplorato + visione, poi moltiplicato su backbuffer via FogBlend.
-- **`RenderTargetUsage.PreserveContents`**: richiesto per l'accumulo GPU (world-fog RT e ping-pong). Non usato nell'approccio finale CPU.
+**Ottimizzazioni Strutturali:**
+- **EntityManager O(N)**: Implementata la gestione delle entità attive tramite swap-on-destroy. I loop di update e draw ora iterano solo sulle unità effettivamente vive, garantendo prestazioni stabili anche dopo migliaia di spawn/destroy.
+- **SpatialGrid Ottimizzata**: Il metodo `Clear()` ora pulisce solo le celle "sporche" utilizzate nel frame precedente, riducendo drasticamente il carico sulla CPU ad ogni tick.
+- **DevConsole PID Check**: Il controllo del focus della console ora utilizza il PID del processo, risolvendo bug di input quando il gioco viene avviato o rifocalizzato.
+
+**Nebbia di Guerra (FOW):**
+- **Seamless Exploration**: Implementato `BlendState.Max` per l'accumulo dei cerchi esplorati. Eliminati gli artefatti visivi (giunture) tra le aree scoperte.
+- **Vision Reset**: Corretto il bug che permetteva alle nuove unità di ereditare la visione da ID entità riutilizzati.
+
+**Sistema Ultra-HD Realistico (1m = 40px):**
+- **Nuova Scala**: Transizione a una scala metrica reale dove 40 pixel corrispondono a 1 metro.
+- **Parametri Unità**:
+    - **Fanteria**: Raggio 30px (1.5m), Velocità 200px/s, Visione 6000px.
+    - **Cavalleria**: Raggio 40px (2.0m), Velocità 600px/s, Visione 12000px.
+    - **Arciere**: Raggio 28px (1.4m), Velocità 180px/s, Visione 9000px.
+    - **Ballista**: Raggio 55px (2.75m), Velocità 60px/s, Visione 9000px.
+    - **Medico**: Raggio 28px (1.4m), Velocità 240px/s, Visione 6000px.
+- **Grafica Smooth**: Raddoppiata la risoluzione delle texture interne dello `ShapeRenderer` (da 128px a 256px di diametro) per garantire bordi anti-aliased cristallini.
+- **Camera Dinamica**: Esteso il limite di Zoom Out a 30x per permettere la gestione tattica di campi di battaglia vasti chilometri.
+- **Margini di Rendering**: Aumentati a 2500px per supportare le alte velocità senza effetti di comparsa improvvisa (pop-in).

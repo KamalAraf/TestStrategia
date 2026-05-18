@@ -9,7 +9,7 @@ public class ShapeRenderer : IDisposable
     private readonly Texture2D _borderTexture;
     private readonly Dictionary<int, (Texture2D Fill, Texture2D Border)> _polyTextures = new();
     private readonly Texture2D _pixel;
-    private const int TexRadius = 64;
+    private const int TexRadius = 128;
     private const int TexDiameter = TexRadius * 2;
     private const float BorderPixels = 12f;
 

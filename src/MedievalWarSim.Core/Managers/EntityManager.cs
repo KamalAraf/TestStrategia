@@ -14,6 +14,8 @@ public class EntityManager
     private readonly bool[]           _alive;
 
     private readonly Stack<int> _freeSlots = new();
+    private readonly int[]      _activeEntities;
+    private readonly int[]      _entityToIndex; // Maps entityId -> index in _activeEntities
     private int _nextNew = 0;
     private int _count;
 
@@ -25,6 +27,9 @@ public class EntityManager
         _health = new HealthComponent[MAX_ENTITIES];
         _visions = new VisionComponent[MAX_ENTITIES];
         _alive = new bool[MAX_ENTITIES];
+        _activeEntities = new int[MAX_ENTITIES];
+        _entityToIndex = new int[MAX_ENTITIES];
+        Array.Fill(_entityToIndex, -1);
     }
 
     public int Create()
@@ -38,6 +43,8 @@ public class EntityManager
             return -1;
 
         _alive[slot] = true;
+        _entityToIndex[slot] = _count;
+        _activeEntities[_count] = slot;
         _count++;
         return slot;
     }
@@ -45,6 +52,15 @@ public class EntityManager
     public void Destroy(int entityId)
     {
         if (!IsAlive(entityId)) return;
+
+        int index = _entityToIndex[entityId];
+        int lastEntityId = _activeEntities[_count - 1];
+
+        // Swap with last
+        _activeEntities[index] = lastEntityId;
+        _entityToIndex[lastEntityId] = index;
+
+        _entityToIndex[entityId] = -1;
         _alive[entityId] = false;
         _count--;
         _freeSlots.Push(entityId);
@@ -53,6 +69,8 @@ public class EntityManager
     public int  Count         => _count;
     public int  Max           => MAX_ENTITIES;
     public int  HighWaterMark => _nextNew;
+
+    public ReadOnlySpan<int> ActiveEntities => _activeEntities.AsSpan(0, _count);
 
     public ref PositionComponent GetPosition(int entityId)
     {

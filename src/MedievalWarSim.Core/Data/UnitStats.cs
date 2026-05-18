@@ -14,11 +14,11 @@ public static class UnitStats
 {
     private static readonly UnitStatData[] _stats =
     [
-        new() { BaseSpeed = 100f, BaseRadius = 16f, BaseHP = 100f, BaseSightRange = 150f }, // Infantry
-        new() { BaseSpeed = 95f,  BaseRadius = 14f, BaseHP = 60f,  BaseSightRange = 350f }, // Archer
-        new() { BaseSpeed = 175f, BaseRadius = 16f, BaseHP = 80f,  BaseSightRange = 180f }, // Cavalry
-        new() { BaseSpeed = 50f,  BaseRadius = 20f, BaseHP = 125f, BaseSightRange = 320f }, // Ballista
-        new() { BaseSpeed = 100f, BaseRadius = 14f, BaseHP = 75f,  BaseSightRange = 150f }, // Medic
+        new() { BaseSpeed = 200f, BaseRadius = 30f, BaseHP = 100f, BaseSightRange = 6000f }, // Infantry
+        new() { BaseSpeed = 180f, BaseRadius = 28f, BaseHP = 60f,  BaseSightRange = 9000f }, // Archer
+        new() { BaseSpeed = 600f, BaseRadius = 40f, BaseHP = 130f, BaseSightRange = 12000f }, // Cavalry
+        new() { BaseSpeed = 60f,  BaseRadius = 55f, BaseHP = 150f, BaseSightRange = 9000f }, // Ballista
+        new() { BaseSpeed = 240f, BaseRadius = 28f, BaseHP = 80f,  BaseSightRange = 6000f }, // Medic
     ];
 
     public static float GetBaseSpeed(UnitType type) => _stats[(int)type].BaseSpeed;

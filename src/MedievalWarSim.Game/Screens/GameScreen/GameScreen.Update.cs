@@ -41,17 +41,15 @@ public partial class GameScreen
 
         // ---- Spatial grid: snapshot positions before movement ----
         _spatialGrid.Clear();
-        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        foreach (int i in _entityManager.ActiveEntities)
         {
-            if (!_entityManager.IsAlive(i)) continue;
             var p = _entityManager.GetPosition(i);
             _spatialGrid.Insert(i, p.X, p.Y);
         }
 
         _tick++;
-        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        foreach (int i in _entityManager.ActiveEntities)
         {
-            if (!_entityManager.IsAlive(i)) continue;
             ref var move = ref _entityManager.GetMove(i);
             if (!move.IsMoving) continue;
 
@@ -165,9 +163,8 @@ public partial class GameScreen
         }
 
         // ---- Stationary separation (resolve overlaps for all entities) ----
-        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        foreach (int i in _entityManager.ActiveEntities)
         {
-            if (!_entityManager.IsAlive(i)) continue;
             ref var pos = ref _entityManager.GetPosition(i);
             float radius = GetUnitRadius(_entityManager.GetUnitType(i).Type);
 
@@ -265,9 +262,8 @@ public partial class GameScreen
             }
 
             // ---- A. Accumulate explored circles (CPU, deduplicated per unit) ----
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            foreach (int i in _entityManager.ActiveEntities)
             {
-                if (!_entityManager.IsAlive(i)) continue;
                 if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
                 var pos = _entityManager.GetPosition(i);
                 float sight = _entityManager.GetVision(i).SightRange;
@@ -295,7 +291,7 @@ public partial class GameScreen
             float drawMarginWorld = DrawMargin * invZ;
 
             // Draw explored circles (grey)
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            spriteBatch.Begin(SpriteSortMode.Deferred, MaxBlend);
             foreach (var (wx, wy, radius) in _exploredCircles)
             {
                 if (wx + radius < viewLeft  - drawMarginWorld ||
@@ -310,10 +306,9 @@ public partial class GameScreen
             spriteBatch.End();
 
             // Draw current vision circles (white)
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            spriteBatch.Begin(SpriteSortMode.Deferred, MaxBlend);
+            foreach (int i in _entityManager.ActiveEntities)
             {
-                if (!_entityManager.IsAlive(i)) continue;
                 if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
                 var  pos   = _entityManager.GetPosition(i);
                 var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
@@ -328,9 +323,8 @@ public partial class GameScreen
             _graphicsDevice.SetRenderTarget(null);
             _graphicsDevice.Clear(new Color(30, 30, 30));
             spriteBatch.Begin();
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            foreach (int i in _entityManager.ActiveEntities)
             {
-                if (!_entityManager.IsAlive(i)) continue;
                 var    pos      = _entityManager.GetPosition(i);
                 var   (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
                 var    type     = _entityManager.GetUnitType(i).Type;
@@ -386,9 +380,8 @@ public partial class GameScreen
         {
             // ---- No vision mode: normal draw ----
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-            for (int i = 0; i < _entityManager.HighWaterMark; i++)
+            foreach (int i in _entityManager.ActiveEntities)
             {
-                if (!_entityManager.IsAlive(i)) continue;
                 var    pos      = _entityManager.GetPosition(i);
                 var   (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
                 var    type     = _entityManager.GetUnitType(i).Type;

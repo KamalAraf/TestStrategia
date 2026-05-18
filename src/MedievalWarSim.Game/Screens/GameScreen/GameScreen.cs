@@ -35,15 +35,15 @@ public partial class GameScreen : IDisposable
     private int _frameCount;
     private double _elapsedFpsTime;
     private int _fps;
-    private const float DrawMargin = 200f;
-    private const float FarMargin = 400f;
+    private const float DrawMargin = 2500f;
+    private const float FarMargin = 5000f;
     private const int FarUpdateInterval = 5;
     private int _tick;
 
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
-    private const float MinExploreDist = 50f;
+    private const float MinExploreDist = 250f;
     private const int MaxEntities = 100000;
     private RenderTarget2D? _rtFinal;
     private readonly List<(float wx, float wy, float radius)> _exploredCircles = new();
@@ -60,6 +60,16 @@ public partial class GameScreen : IDisposable
         AlphaDestinationBlend = Blend.SourceAlpha
     };
 
+    private static readonly BlendState MaxBlend = new()
+    {
+        ColorBlendFunction = BlendFunction.Max,
+        ColorSourceBlend = Blend.One,
+        ColorDestinationBlend = Blend.One,
+        AlphaBlendFunction = BlendFunction.Max,
+        AlphaSourceBlend = Blend.One,
+        AlphaDestinationBlend = Blend.One
+    };
+
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
@@ -69,13 +79,23 @@ public partial class GameScreen : IDisposable
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
     private static bool IsCtrlHeld()
         => (GetAsyncKeyState(0xA2) & 0x8000) != 0 ||
            (GetAsyncKeyState(0xA3) & 0x8000) != 0;
 
     private readonly IntPtr _gameWindowHandle;
+    private readonly uint _processId;
 
-    private bool IsGameFocused() => GetForegroundWindow() == _gameWindowHandle;
+    private bool IsGameFocused()
+    {
+        IntPtr fw = GetForegroundWindow();
+        if (fw == IntPtr.Zero) return false;
+        GetWindowThreadProcessId(fw, out uint pid);
+        return pid == _processId;
+    }
 
     private static float GetUnitRadius(UnitType type) => UnitStats.GetBaseRadius(type);
 
@@ -83,6 +103,7 @@ public partial class GameScreen : IDisposable
     {
         _font = font;
         _gameWindowHandle = FindWindow(null, "MedievalWarSim");
+        _processId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
         _cameraController = new CameraController(_camera);
         _entityManager = new EntityManager();
         _shapeRenderer = new ShapeRenderer(graphicsDevice);
@@ -90,18 +111,20 @@ public partial class GameScreen : IDisposable
         _console = new DevConsole();
         _viewport = graphicsDevice.Viewport;
 
-        _entityManager.Create();
-        _entityManager.GetPosition(0) = new PositionComponent
+        int id0 = _entityManager.Create();
+        _lastExploredX[id0] = -1000000f;
+        _lastExploredY[id0] = -1000000f;
+        _entityManager.GetPosition(id0) = new PositionComponent
         {
             X = _viewport.Width / 2f,
             Y = _viewport.Height / 2f
         };
         var rt = (UnitType)Random.Shared.Next(5);
-        _entityManager.GetUnitType(0) = new UnitTypeComponent { Type = rt };
-        _entityManager.GetMove(0).Speed = UnitStats.RollSpeed(rt);
-        _entityManager.GetVision(0).SightRange = UnitStats.RollSightRange(rt);
+        _entityManager.GetUnitType(id0) = new UnitTypeComponent { Type = rt };
+        _entityManager.GetMove(id0).Speed = UnitStats.RollSpeed(rt);
+        _entityManager.GetVision(id0).SightRange = UnitStats.RollSightRange(rt);
         float hp = UnitStats.RollHP(rt);
-        _entityManager.GetHealth(0) = new HealthComponent { MaxHP = hp, CurrentHP = hp };
+        _entityManager.GetHealth(id0) = new HealthComponent { MaxHP = hp, CurrentHP = hp };
 
         RegisterCommands();
     }

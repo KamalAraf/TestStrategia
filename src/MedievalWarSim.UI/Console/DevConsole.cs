@@ -156,7 +156,19 @@ public class DevConsole
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[DevConsole] ReadLoop exception: {ex.Message}");
+            // If we have a crash in the read loop, we want to know about it.
+            // Note: writing to Console here might fail if FreeConsole was called.
+            System.Diagnostics.Debug.WriteLine($"[DevConsole] ReadLoop CRASH: {ex}");
+            try 
+            {
+                if (_running)
+                {
+                    System.Console.WriteLine($"\n[DevConsole] FATAL ERROR: {ex.Message}");
+                    System.Console.WriteLine("Press any key to close console...");
+                    System.Console.ReadKey(true);
+                }
+            } 
+            catch { }
         }
 
         if (_running)

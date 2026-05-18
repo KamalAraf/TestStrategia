@@ -6,7 +6,7 @@ public class Camera
     public float Y { get; set; }
     public float Zoom { get; set; } = 1f;
     public const float MinZoom = 0.25f;
-    public const float MaxZoom = 4f;
+    public const float MaxZoom = 30f;
     public const float PanSpeed = 400f;
 
     public (float x, float y) ScreenToWorld(float sx, float sy)
