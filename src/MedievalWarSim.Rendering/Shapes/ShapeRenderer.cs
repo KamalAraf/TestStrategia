@@ -39,8 +39,8 @@ public class ShapeRenderer : IDisposable
         if (_polyTextures.TryGetValue(sides, out var pair))
         {
             spriteBatch.Draw(pair.Fill, pos, null, fillColor, rotation, origin, scale, SpriteEffects.None, 0f);
-            Color bColor = borderColor ?? Color.Black;
-            spriteBatch.Draw(pair.Border, pos, null, bColor, rotation, origin, scale, SpriteEffects.None, 0f);
+            if (borderColor.HasValue)
+                spriteBatch.Draw(pair.Border, pos, null, borderColor.Value, rotation, origin, scale, SpriteEffects.None, 0f);
         }
         else
         {
@@ -56,8 +56,8 @@ public class ShapeRenderer : IDisposable
 
         spriteBatch.Draw(_fillTexture, pos, null, fillColor, 0f, origin, scale, SpriteEffects.None, 0f);
 
-        Color bColor = borderColor ?? Color.Black;
-        spriteBatch.Draw(_borderTexture, pos, null, bColor, 0f, origin, scale, SpriteEffects.None, 0f);
+        if (borderColor.HasValue)
+            spriteBatch.Draw(_borderTexture, pos, null, borderColor.Value, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 
     public void DrawCircleBorder(SpriteBatch spriteBatch, float cx, float cy, float radius, float thickness, Color color)

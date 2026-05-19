@@ -63,7 +63,7 @@ public partial class GameScreen
             float viewBottom = _camera.Y + h * invZ;
             float drawMarginWorld = DrawMargin * invZ;
 
-            // Draw explored circles (grey)
+            // Draw explored circles (grey) + vision circles (white) in one batch (same MaxBlend)
             spriteBatch.Begin(SpriteSortMode.Deferred, MaxBlend);
             foreach (var (wx, wy, radius) in _exploredCircles)
             {
@@ -76,10 +76,6 @@ public partial class GameScreen
                 float sr = radius * _camera.Zoom;
                 _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sr, new Color(180, 180, 180), Color.Transparent);
             }
-            spriteBatch.End();
-
-            // Draw current vision circles (white)
-            spriteBatch.Begin(SpriteSortMode.Deferred, MaxBlend);
             foreach (int i in _entityManager.ActiveEntities)
             {
                 if (_visionMode == VisionMode.ShowSingle && i != _visionUnitId) continue;
