@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MedievalWarSim.Core.Data;
 using MedievalWarSim.Core.Enums;
 using MedievalWarSim.Game.Data;
 
@@ -42,6 +43,8 @@ public partial class GameScreen
                 float dy = pos.Y - _lastExploredY[i];
                 if (dx * dx + dy * dy > MinExploreDist * MinExploreDist)
                 {
+                    if (_exploredCircles.Count >= MaxExploredCircles)
+                        _exploredCircles.RemoveAt(0);
                     _exploredCircles.Add((pos.X, pos.Y, sight));
                     _lastExploredX[i] = pos.X;
                     _lastExploredY[i] = pos.Y;
@@ -97,7 +100,7 @@ public partial class GameScreen
                 var    pos      = _entityManager.GetPosition(i);
                 var   (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
                 var    type     = _entityManager.GetUnitType(i).Type;
-                float  radius   = GetUnitRadius(type);
+                float  radius   = UnitStats.GetBaseRadius(type);
                 float  sr       = radius * _camera.Zoom;
                 if (sx + sr < -DrawMargin || sx - sr > w + DrawMargin ||
                     sy + sr < -DrawMargin || sy - sr > h + DrawMargin) continue;
@@ -158,7 +161,7 @@ public partial class GameScreen
                 var    pos      = _entityManager.GetPosition(i);
                 var   (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
                 var    type     = _entityManager.GetUnitType(i).Type;
-                float  radius   = GetUnitRadius(type);
+                float  radius   = UnitStats.GetBaseRadius(type);
                 float  sr       = radius * _camera.Zoom;
                 if (sx + sr < -DrawMargin || sx - sr > _viewport.Width + DrawMargin ||
                     sy + sr < -DrawMargin || sy - sr > _viewport.Height + DrawMargin)

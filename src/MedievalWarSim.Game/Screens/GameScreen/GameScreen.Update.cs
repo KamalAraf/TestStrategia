@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MedievalWarSim.Core.Data;
 using MedievalWarSim.Core.Enums;
 using MedievalWarSim.Game;
 
@@ -81,7 +81,7 @@ public partial class GameScreen
             if (!move.IsMoving) continue;
 
             ref var pos = ref _entityManager.GetPosition(i);
-            float radius = GetUnitRadius(_entityManager.GetUnitType(i).Type);
+            float radius = UnitStats.GetBaseRadius(_entityManager.GetUnitType(i).Type);
             var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
             float sr = radius * _camera.Zoom;
             if (sx + sr < -FarMargin || sx - sr > _viewport.Width + FarMargin ||
@@ -95,14 +95,21 @@ public partial class GameScreen
             float dy = move.TargetY - pos.Y;
             float dist = MathF.Sqrt(dx * dx + dy * dy);
 
-            if (dist > 0.001f)
-                move.FacingAngle = MathF.Atan2(dy, dx) + MathF.PI / 2f;
-
             if (dist < 1f)
             {
                 move.IsMoving = false;
                 move.StuckTimer = 0f;
                 continue;
+            }
+
+            // Facing: skip Atan2 if target direction hasn't changed significantly
+            float tdx = move.TargetX - move.PrevTargetX;
+            float tdy = move.TargetY - move.PrevTargetY;
+            if (tdx * tdx + tdy * tdy > 2f)
+            {
+                move.FacingAngle = MathF.Atan2(dy, dx) + MathF.PI / 2f;
+                move.PrevTargetX = move.TargetX;
+                move.PrevTargetY = move.TargetY;
             }
 
             // ---- Compute desired velocity ----
@@ -127,7 +134,7 @@ public partial class GameScreen
             {
                 if (j == i || !_entityManager.IsAlive(j)) continue;
                 ref var posJ = ref _entityManager.GetPosition(j);
-                float rJ = GetUnitRadius(_entityManager.GetUnitType(j).Type);
+                float rJ = UnitStats.GetBaseRadius(_entityManager.GetUnitType(j).Type);
                 float minDist = radius + rJ + 3f;
 
                 float rdx = posJ.X - pos.X;
@@ -198,7 +205,7 @@ public partial class GameScreen
         foreach (int i in _entityManager.ActiveEntities)
         {
             ref var pos = ref _entityManager.GetPosition(i);
-            float radius = GetUnitRadius(_entityManager.GetUnitType(i).Type);
+            float radius = UnitStats.GetBaseRadius(_entityManager.GetUnitType(i).Type);
 
             // Far culling: skip distant entities most frames
             var (sx, sy) = _camera.WorldToScreen(pos.X, pos.Y);
@@ -217,7 +224,7 @@ public partial class GameScreen
             {
                 if (j <= i || !_entityManager.IsAlive(j)) continue;
                 ref var posJ = ref _entityManager.GetPosition(j);
-                float rJ = GetUnitRadius(_entityManager.GetUnitType(j).Type);
+                float rJ = UnitStats.GetBaseRadius(_entityManager.GetUnitType(j).Type);
                 float minDist = radius + rJ + 3f;
 
                 float rdx = posJ.X - pos.X;

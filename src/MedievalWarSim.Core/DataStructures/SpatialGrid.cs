@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace MedievalWarSim.Core.DataStructures;
 
 public class SpatialGrid
@@ -18,14 +20,13 @@ public class SpatialGrid
         int cx = (int)MathF.Floor(x / CellSize);
         int cy = (int)MathF.Floor(y / CellSize);
         long key = (long)cx << 32 | (uint)cy;
-        if (!_cells.TryGetValue(key, out var list))
-        {
-            _cells[key] = list = new List<int>();
-        }
-        
-        if (list.Count == 0)
+        ref var list = ref CollectionsMarshal.GetValueRefOrAddDefault(_cells, key, out bool exists);
+        if (!exists)
+            list = new List<int>();
+
+        if (list!.Count == 0)
             _activeKeys.Add(key);
-            
+
         list.Add(id);
     }
 

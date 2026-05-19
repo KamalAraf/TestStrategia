@@ -1,3 +1,4 @@
+using MedievalWarSim.Core.Data;
 using Microsoft.Xna.Framework.Input;
 
 namespace MedievalWarSim.Screens;
@@ -89,7 +90,7 @@ public partial class GameScreen
         {
             var   pos    = _entityManager.GetPosition(i);
             var   type   = _entityManager.GetUnitType(i).Type;
-            float r      = GetUnitRadius(type);
+            float r      = UnitStats.GetBaseRadius(type);
             float dx     = mouseX - pos.X;
             float dy     = mouseY - pos.Y;
             if (dx * dx + dy * dy <= r * r)

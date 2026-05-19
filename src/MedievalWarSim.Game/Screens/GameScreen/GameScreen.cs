@@ -44,9 +44,10 @@ public partial class GameScreen : IDisposable
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
     private const float MinExploreDist = 400f;
+    private const int MaxExploredCircles = 50000;
     private const int MaxEntities = 100000;
     private RenderTarget2D? _rtFinal;
-    private readonly List<(float wx, float wy, float radius)> _exploredCircles = new();
+    private readonly List<(float wx, float wy, float radius)> _exploredCircles = new(MaxExploredCircles);
     private readonly float[] _lastExploredX = new float[MaxEntities];
     private readonly float[] _lastExploredY = new float[MaxEntities];
     private int _rtW, _rtH;
@@ -90,8 +91,6 @@ public partial class GameScreen : IDisposable
         IntPtr fw = GetForegroundWindow();
         return fw != IntPtr.Zero && fw == _gameWindowHandle;
     }
-
-    private static float GetUnitRadius(UnitType type) => UnitStats.GetBaseRadius(type);
 
     public GameScreen(GraphicsDevice graphicsDevice, SpriteFont font)
     {
