@@ -773,3 +773,12 @@ Before implementing the LOD system, development will focus on:
 
 **Bug fix:**
 - Comando `team`: rimosso `[id]` in piu dalla usage string
+
+### 19/05/2026 — Morte visiva
+
+- **Morte visiva**: HP ≤ 0 → unità diventa grigia per 2 secondi, health bar vuota, movimento fermo, non selezionabile; poi `Destroy` reale
+- **EntityManager**: nuovo array `_deathTimers`, metodo `GetDeathTimer()`, helper `IsDying()`
+- **Update**: trigger morte (set timer 2.0s) invece di Destroy immediato; countdown loop backward per Destroy sicuro; dying skippato in movimento, collisione sliding, stationary separation
+- **Draw**: unità dying forzata a `Color(100,100,100)` indipendentemente da team/stamina desaturazione
+- **Input**: dying skippato in click singolo, drag box, right-click move
+- **Comandi**: `health remove` e `health set 0` usano death timer invece di Destroy
