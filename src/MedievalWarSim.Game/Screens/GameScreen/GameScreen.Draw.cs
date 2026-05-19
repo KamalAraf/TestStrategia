@@ -43,9 +43,10 @@ public partial class GameScreen
                 float dy = pos.Y - _lastExploredY[i];
                 if (dx * dx + dy * dy > MinExploreDist * MinExploreDist)
                 {
-                    if (_exploredCircles.Count >= MaxExploredCircles)
-                        _exploredCircles.RemoveAt(0);
-                    _exploredCircles.Add((pos.X, pos.Y, sight));
+                    long cellKey = (long)(int)MathF.Floor(pos.X / ExploredCellSize) << 32 |
+                                   (uint)(int)MathF.Floor(pos.Y / ExploredCellSize);
+                    if (_exploredCellKeys.Add(cellKey))
+                        _exploredCircles.Add((pos.X, pos.Y, sight));
                     _lastExploredX[i] = pos.X;
                     _lastExploredY[i] = pos.Y;
                 }
