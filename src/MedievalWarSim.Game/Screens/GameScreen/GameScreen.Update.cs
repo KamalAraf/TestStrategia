@@ -47,9 +47,46 @@ public partial class GameScreen
             _spatialGrid.Insert(i, p.X, p.Y);
         }
 
+        // ---- Stamina drain/recovery ----
+        foreach (int i in _entityManager.ActiveEntities)
+        {
+            ref var move = ref _entityManager.GetMove(i);
+            ref var stamina = ref _entityManager.GetStamina(i);
+
+            if (move.IsMoving)
+            {
+                stamina.CurrentStamina = Math.Max(0f, stamina.CurrentStamina - stamina.DrainRate * dt);
+
+                if (stamina.CurrentStamina < stamina.MaxStamina * 0.30f)
+                {
+                    float hpDrain = stamina.CurrentStamina < stamina.MaxStamina * 0.15f ? 2.0f : 0.5f;
+                    ref var hp = ref _entityManager.GetHealth(i);
+                    hp.CurrentHP -= hpDrain * dt;
+                }
+            }
+            else
+            {
+                stamina.CurrentStamina = Math.Min(stamina.MaxStamina, stamina.CurrentStamina + stamina.RecoveryRate * dt);
+            }
+        }
+
+        // ---- Death cleanup (HP <= 0 from stamina drain) ----
+        var activeSnapshot = _entityManager.ActiveEntities;
+        for (int i = activeSnapshot.Length - 1; i >= 0; i--)
+        {
+            int eid = activeSnapshot[i];
+            if (_entityManager.GetHealth(eid).CurrentHP <= 0f)
+            {
+                _entityManager.GetHealth(eid).CurrentHP = 0f;
+                _entityManager.Destroy(eid);
+                _selectedUnitIds.Remove(eid);
+            }
+        }
+
         _tick++;
         foreach (int i in _entityManager.ActiveEntities)
         {
+            if (!_entityManager.IsAlive(i)) continue;
             ref var move = ref _entityManager.GetMove(i);
             if (!move.IsMoving) continue;
 
@@ -79,7 +116,14 @@ public partial class GameScreen
             }
 
             // ---- Compute desired velocity ----
-            float step = move.Speed * dt;
+            var stamina = _entityManager.GetStamina(i);
+            float staminaRatio = stamina.CurrentStamina / stamina.MaxStamina;
+            float speedMult = staminaRatio >= 0.60f ? 1.0f :
+                              staminaRatio >= 0.30f ? 0.7f :
+                              staminaRatio >= 0.15f ? 0.3f :
+                              0.25f;
+
+            float step = move.Speed * speedMult * dt;
             if (step >= dist) step = dist;
             float vx = dx / dist * step;
             float vy = dy / dist * step;
@@ -336,7 +380,10 @@ public partial class GameScreen
                 ref var move    = ref _entityManager.GetMove(i);
                 float  rotation = move.FacingAngle;
                 Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
-                _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
+                var stamina = _entityManager.GetStamina(i);
+                float t = 1f - stamina.CurrentStamina / stamina.MaxStamina;
+                Color unitColor = Color.Lerp(Color.Red, new Color(100, 100, 100), t);
+                _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, unitColor, borderColor);
                 var hp = _entityManager.GetHealth(i);
                 if (hp.CurrentHP < hp.MaxHP && sr > 4f)
                 {
@@ -395,7 +442,10 @@ public partial class GameScreen
                 ref var move       = ref _entityManager.GetMove(i);
                 float  rotation    = move.FacingAngle;
                 Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
-                _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, borderColor);
+                var stamina = _entityManager.GetStamina(i);
+                float t = 1f - stamina.CurrentStamina / stamina.MaxStamina;
+                Color unitColor = Color.Lerp(Color.Red, new Color(100, 100, 100), t);
+                _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, unitColor, borderColor);
 
                 var hp = _entityManager.GetHealth(i);
                 if (hp.CurrentHP < hp.MaxHP && sr > 4f)
@@ -448,8 +498,10 @@ public partial class GameScreen
             System.Console.Write($" -> ({move.TargetX:F1};{move.TargetY:F1})");
         System.Console.WriteLine();
         System.Console.WriteLine($"  HP:        {hp.CurrentHP:F1}/{hp.MaxHP:F1}");
+        var stamina = _entityManager.GetStamina(id);
         System.Console.WriteLine($"  Speed:     {move.Speed:F1}");
         System.Console.WriteLine($"  Sight:     {vis.SightRange:F1}");
+        System.Console.WriteLine($"  Stamina:   {stamina.CurrentStamina:F1}/{stamina.MaxStamina:F1}");
         System.Console.WriteLine($"  Selected:  {_selectedUnitIds.Contains(id)}");
         System.Console.WriteLine($"  Moving:    {move.IsMoving}");
     }

@@ -11,6 +11,7 @@ public class EntityManager
     private readonly MoveComponent[] _moves;
     private readonly HealthComponent[] _health;
     private readonly VisionComponent[] _visions;
+    private readonly StaminaComponent[] _stamina;
     private readonly bool[]           _alive;
 
     private readonly Stack<int> _freeSlots = new();
@@ -26,6 +27,7 @@ public class EntityManager
         _moves = new MoveComponent[MAX_ENTITIES];
         _health = new HealthComponent[MAX_ENTITIES];
         _visions = new VisionComponent[MAX_ENTITIES];
+        _stamina = new StaminaComponent[MAX_ENTITIES];
         _alive = new bool[MAX_ENTITIES];
         _activeEntities = new int[MAX_ENTITIES];
         _entityToIndex = new int[MAX_ENTITIES];
@@ -105,6 +107,13 @@ public class EntityManager
         if ((uint)entityId >= (uint)MAX_ENTITIES)
             throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
         return ref _visions[entityId];
+    }
+
+    public ref StaminaComponent GetStamina(int entityId)
+    {
+        if ((uint)entityId >= (uint)MAX_ENTITIES)
+            throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
+        return ref _stamina[entityId];
     }
 
     public bool IsAlive(int entityId)

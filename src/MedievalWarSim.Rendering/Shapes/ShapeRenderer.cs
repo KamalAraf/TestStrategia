@@ -9,9 +9,9 @@ public class ShapeRenderer : IDisposable
     private readonly Texture2D _borderTexture;
     private readonly Dictionary<int, (Texture2D Fill, Texture2D Border)> _polyTextures = new();
     private readonly Texture2D _pixel;
-    private const int TexRadius = 128;
+    private const int TexRadius = 512;
     private const int TexDiameter = TexRadius * 2;
-    private const float BorderPixels = 12f;
+    private const float BorderPixels = 96f;
 
     private static readonly int[] PolySides = { 3, 4, 5, 6, 8 };
 
@@ -30,7 +30,7 @@ public class ShapeRenderer : IDisposable
         }
     }
 
-    public void DrawShape(SpriteBatch spriteBatch, float x, float y, float radius, int sides, float rotation, Color? borderColor)
+    public void DrawShape(SpriteBatch spriteBatch, float x, float y, float radius, int sides, float rotation, Color fillColor, Color? borderColor)
     {
         float scale = radius / TexRadius;
         var origin = new Vector2(TexRadius, TexRadius);
@@ -38,23 +38,23 @@ public class ShapeRenderer : IDisposable
 
         if (_polyTextures.TryGetValue(sides, out var pair))
         {
-            spriteBatch.Draw(pair.Fill, pos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(pair.Fill, pos, null, fillColor, rotation, origin, scale, SpriteEffects.None, 0f);
             Color bColor = borderColor ?? Color.Black;
             spriteBatch.Draw(pair.Border, pos, null, bColor, rotation, origin, scale, SpriteEffects.None, 0f);
         }
         else
         {
-            DrawCircle(spriteBatch, x, y, radius, borderColor);
+            DrawCircle(spriteBatch, x, y, radius, fillColor, borderColor);
         }
     }
 
-    public void DrawCircle(SpriteBatch spriteBatch, float x, float y, float radius, Color? borderColor)
+    public void DrawCircle(SpriteBatch spriteBatch, float x, float y, float radius, Color fillColor, Color? borderColor)
     {
         float scale = radius / TexRadius;
         var origin = new Vector2(TexRadius, TexRadius);
         var pos = new Vector2(x, y);
 
-        spriteBatch.Draw(_fillTexture, pos, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+        spriteBatch.Draw(_fillTexture, pos, null, fillColor, 0f, origin, scale, SpriteEffects.None, 0f);
 
         Color bColor = borderColor ?? Color.Black;
         spriteBatch.Draw(_borderTexture, pos, null, bColor, 0f, origin, scale, SpriteEffects.None, 0f);

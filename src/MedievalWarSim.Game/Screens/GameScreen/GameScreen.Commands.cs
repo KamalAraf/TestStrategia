@@ -199,6 +199,8 @@ public partial class GameScreen
                     _entityManager.GetVision(id).SightRange = UnitStats.RollSightRange(rt);
                     float rhp = UnitStats.RollHP(rt);
                     _entityManager.GetHealth(id) = new HealthComponent { MaxHP = rhp, CurrentHP = rhp };
+                    float rst = UnitStats.RollMaxStamina(rt);
+                    _entityManager.GetStamina(id) = new StaminaComponent { MaxStamina = rst, CurrentStamina = rst, DrainRate = 0.2f, RecoveryRate = 1.0f };
                     created++;
                 }
 
@@ -248,6 +250,8 @@ public partial class GameScreen
             _entityManager.GetVision(newId).SightRange = UnitStats.RollSightRange(parsedType);
             float hp2 = UnitStats.RollHP(parsedType);
             _entityManager.GetHealth(newId) = new HealthComponent { MaxHP = hp2, CurrentHP = hp2 };
+            float st2 = UnitStats.RollMaxStamina(parsedType);
+            _entityManager.GetStamina(newId) = new StaminaComponent { MaxStamina = st2, CurrentStamina = st2, DrainRate = 0.2f, RecoveryRate = 1.0f };
             System.Console.WriteLine($"Created {parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
         });
 
@@ -374,6 +378,8 @@ public partial class GameScreen
                 _entityManager.GetVision(eid).SightRange = UnitStats.RollSightRange(t);
                 float hp = UnitStats.RollHP(t);
                 _entityManager.GetHealth(eid) = new HealthComponent { MaxHP = hp, CurrentHP = hp };
+                float st = UnitStats.RollMaxStamina(t);
+                _entityManager.GetStamina(eid) = new StaminaComponent { MaxStamina = st, CurrentStamina = st, DrainRate = 0.2f, RecoveryRate = 1.0f };
             }
 
             if (op == "random")
@@ -637,6 +643,105 @@ public partial class GameScreen
         _console.RegisterCommand("zoom", _ =>
         {
             System.Console.WriteLine($"Zoom: {_camera.Zoom:F2}x (min={Camera.MinZoom:F1}, max={Camera.MaxZoom:F1})");
+        });
+
+        _console.RegisterCommand("stamina", args =>
+        {
+            if (args.Length < 3 && !(args.Length == 2 && args[1] == "random"))
+            {
+                System.Console.WriteLine("Usage: stamina <id|all> add|remove|set|random [amount]");
+                return;
+            }
+
+            string targetArg = args[0].ToLowerInvariant();
+            string op = args[1].ToLowerInvariant();
+
+            void ApplyStamina(int eid, string o, float val)
+            {
+                ref var s = ref _entityManager.GetStamina(eid);
+                switch (o)
+                {
+                    case "add":
+                        s.CurrentStamina = Math.Min(s.MaxStamina, s.CurrentStamina + val);
+                        break;
+                    case "remove":
+                        s.CurrentStamina = Math.Max(0f, s.CurrentStamina - val);
+                        break;
+                    case "set":
+                        s.CurrentStamina = Math.Clamp(val, 0f, s.MaxStamina);
+                        break;
+                }
+            }
+
+            if (op == "random")
+            {
+                if (targetArg == "all")
+                {
+                    int count = 0;
+                    foreach (int i in _entityManager.ActiveEntities)
+                    {
+                        var ut = _entityManager.GetUnitType(i).Type;
+                        float rst = UnitStats.RollMaxStamina(ut);
+                        ref var s = ref _entityManager.GetStamina(i);
+                        s.MaxStamina = rst;
+                        s.CurrentStamina = rst;
+                        count++;
+                    }
+                    System.Console.WriteLine($"Randomized stamina for {count} unit(s).");
+                }
+                else if (int.TryParse(args[0], out int eid) && _entityManager.IsAlive(eid))
+                {
+                    var ut = _entityManager.GetUnitType(eid).Type;
+                    float rst = UnitStats.RollMaxStamina(ut);
+                    ref var s = ref _entityManager.GetStamina(eid);
+                    s.MaxStamina = rst;
+                    s.CurrentStamina = rst;
+                    System.Console.WriteLine($"Unit {eid} stamina randomized to {rst:F1}.");
+                }
+                else
+                {
+                    System.Console.WriteLine($"Unit {args[0]} does not exist.");
+                }
+                return;
+            }
+
+            if (op != "add" && op != "remove" && op != "set")
+            {
+                System.Console.WriteLine("Usage: stamina <id|all> add|remove|set|random [amount]");
+                return;
+            }
+
+            if (!float.TryParse(args[2], out float amount))
+            {
+                System.Console.WriteLine("Invalid amount.");
+                return;
+            }
+
+            if (targetArg == "all")
+            {
+                int count = 0;
+                foreach (int i in _entityManager.ActiveEntities)
+                {
+                    ApplyStamina(i, op, amount);
+                    count++;
+                }
+                System.Console.WriteLine($"Applied stamina {op} {amount} to {count} unit(s).");
+            }
+            else if (int.TryParse(args[0], out int eid))
+            {
+                if (!_entityManager.IsAlive(eid))
+                {
+                    System.Console.WriteLine($"Unit {eid} does not exist.");
+                    return;
+                }
+                ApplyStamina(eid, op, amount);
+                var s = _entityManager.GetStamina(eid);
+                System.Console.WriteLine($"Unit {eid} stamina: {s.CurrentStamina:F1}/{s.MaxStamina:F1}");
+            }
+            else
+            {
+                System.Console.WriteLine("Usage: stamina <id|all> add|remove|set|random [amount]");
+            }
         });
     }
 }

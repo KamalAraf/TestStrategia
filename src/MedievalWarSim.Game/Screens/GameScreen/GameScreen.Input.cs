@@ -49,9 +49,8 @@ public partial class GameScreen
                     if (!IsCtrlHeld())
                         _selectedUnitIds.Clear();
 
-                    for (int i = 0; i < _entityManager.HighWaterMark; i++)
+                    foreach (int i in _entityManager.ActiveEntities)
                     {
-                        if (!_entityManager.IsAlive(i)) continue;
                         var pos = _entityManager.GetPosition(i);
                         if (pos.X >= wsx && pos.X <= wex && pos.Y >= wsy && pos.Y <= wey)
                             _selectedUnitIds.Add(i);
@@ -86,9 +85,8 @@ public partial class GameScreen
     private void HandleClick(float mouseX, float mouseY, bool addToSelection)
     {
         int? clickedUnit = null;
-        for (int i = 0; i < _entityManager.HighWaterMark; i++)
+        foreach (int i in _entityManager.ActiveEntities)
         {
-            if (!_entityManager.IsAlive(i)) continue;
             var   pos    = _entityManager.GetPosition(i);
             var   type   = _entityManager.GetUnitType(i).Type;
             float r      = GetUnitRadius(type);

@@ -909,6 +909,36 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 
 ---
 
+## Visual Hierarchy and Zoom LOD (Planned)
+
+To ensure clarity and performance on a massive scale, the game uses a Level of Detail (LOD) system tied to the camera zoom:
+
+1. **Soldier Level (1.0x → 0.25x)**:
+   - **Focus**: Individual micro-management and combat.
+   - **Visuals**: Full geometric shapes (polygons), individual rotations, health bars, and smooth borders.
+   - **Command**: Direct control of every single unit.
+
+2. **Lieutenant Level (0.25x → 0.1x)**:
+   - **Focus**: Squad-level operations (50-100 units).
+   - **Visuals**: Individual soldiers fade into compact color blocks/formations.
+   - **Icons**: Medium-sized **Lieutenant** icons appear as primary tactical anchors. Individual HP bars are replaced by a single squad health indicator.
+
+3. **Strategic Level (0.1x → 0.01x)**:
+   - **Focus**: Global theater and division maneuvers.
+   - **Generals**: Large, prominent icons representing entire army wings (1000+ units).
+   - **Army Chief**: A small but visually unique/special icon (e.g., golden crown/eagle). Smaller than Generals to emphasize the "brain" of the army over brute force.
+   - **Visuals**: Map-wide perspective; only command figures and major movement vectors are rendered.
+
+---
+
+### NEXT STEPS: Core Unit Mechanics
+Before implementing the LOD system, development will focus on:
+1. **Combat System**: Auto-attack logic, damage calculation, and unit-type advantages.
+2. **Stances**: Implementation of **Hold**, **Attack**, and **Move** behaviors.
+3. **Morale & Stamina**: Finalizing the impact of fatigue and fear on unit performance.
+
+---
+
 ## DEVELOPING
 
 ### 16/05/2026 — Mouse click detection, focus handling, thread safety
@@ -1056,3 +1086,29 @@ Terrain types affect path costs at the spatial grid level, with hills, forests, 
 - **Grafica Smooth**: Raddoppiata la risoluzione delle texture interne dello `ShapeRenderer` (da 128px a 256px di diametro) per garantire bordi anti-aliased cristallini.
 - **Camera Dinamica**: Esteso il limite di Zoom Out a 30x per permettere la gestione tattica di campi di battaglia vasti chilometri.
 - **Margini di Rendering**: Aumentati a 2500px per supportare le alte velocità senza effetti di comparsa improvvisa (pop-in).
+
+### 19/05/2026 — Stamina System + Fix iterazione codice morto
+
+**Stamina System:**
+- **`StaminaComponent`**: `MaxStamina` (100 base ±5%), `CurrentStamina`, `DrainRate` (0.2/s), `RecoveryRate` (1.0/s)
+- **Consumo**: solo in movimento (`move.IsMoving`), drain lineare 0.2/s → ~8 min da pieno a vuoto
+- **Recupero**: solo da fermo, 1.0/s → ~1.7 min da vuoto a pieno
+- **Speed multiplier** (applicato a `step` prima del movimento):
+
+| Stamina | Speed mult | Effetto |
+|---|---|---|
+| 100–60% | 1.0× | Normale |
+| 60–30% | 0.7× | Affaticato |
+| 30–15% | 0.3× | Stanco + 0.5 HP/s |
+| <15% | 0.25× | Esausto + 2.0 HP/s |
+
+- **Colore desaturazione fluida**: `Color.Lerp(Color.Red, Color(100,100,100), 1 - stamina%)` in entrambi i Draw branch (vision e normal)
+- **Death cleanup**: entity con HP ≤ 0 da stamina drain distrutte in pass separato (iterazione backward su snapshot per sicurezza)
+- **Comandi console**: `stamina <id|all> add|remove|set|random [amount]` con supporto ±5% roll
+- **`info`**: mostra stamina `Current/Max`
+- **UnitStats**: `BaseMaxStamina` (100 flat per tutti i tipi) + `RollMaxStamina()`
+
+**Code quality fixes:**
+- **HandleClick** e **drag-select**: ora iterano `ActiveEntities` (solo entità vive) invece di `HighWaterMark` + `IsAlive` — eliminata scansione di slot morti
+- **Stamina drain loop**: non chiama più `Destroy()` dentro `foreach` su `ActiveEntities` (swap corrompe iterazione), usa death cleanup backward pass separato
+- **Focus detection fix**: `IsGameFocused()` confronta HWND diretto (`fw == _gameWindowHandle`) invece di `pid == _processId` — AllocConsole ha lo stesso PID del gioco, quindi con `pid` check la console faceva passare drag/click sul game window. Rimosso `_processId` e `GetWindowThreadProcessId` inutilizzati.

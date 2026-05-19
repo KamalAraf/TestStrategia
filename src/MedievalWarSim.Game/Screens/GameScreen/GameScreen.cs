@@ -35,15 +35,15 @@ public partial class GameScreen : IDisposable
     private int _frameCount;
     private double _elapsedFpsTime;
     private int _fps;
-    private const float DrawMargin = 2500f;
-    private const float FarMargin = 5000f;
+    private const float DrawMargin = 600f;
+    private const float FarMargin = 1200f;
     private const int FarUpdateInterval = 5;
     private int _tick;
 
     private enum VisionMode { None, ShowSingle, ShowAll }
     private VisionMode _visionMode;
     private int _visionUnitId = -1;
-    private const float MinExploreDist = 250f;
+    private const float MinExploreDist = 400f;
     private const int MaxEntities = 100000;
     private RenderTarget2D? _rtFinal;
     private readonly List<(float wx, float wy, float radius)> _exploredCircles = new();
@@ -125,6 +125,8 @@ public partial class GameScreen : IDisposable
         _entityManager.GetVision(id0).SightRange = UnitStats.RollSightRange(rt);
         float hp = UnitStats.RollHP(rt);
         _entityManager.GetHealth(id0) = new HealthComponent { MaxHP = hp, CurrentHP = hp };
+        float st = UnitStats.RollMaxStamina(rt);
+        _entityManager.GetStamina(id0) = new StaminaComponent { MaxStamina = st, CurrentStamina = st, DrainRate = 0.2f, RecoveryRate = 1.0f };
 
         RegisterCommands();
     }
