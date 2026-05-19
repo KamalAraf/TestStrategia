@@ -750,3 +750,26 @@ Before implementing the LOD system, development will focus on:
 - **HandleClick** e **drag-select**: ora iterano `ActiveEntities` (solo entità vive) invece di `HighWaterMark` + `IsAlive` — eliminata scansione di slot morti
 - **Stamina drain loop**: non chiama più `Destroy()` dentro `foreach` su `ActiveEntities` (swap corrompe iterazione), usa death cleanup backward pass separato
 - **Focus detection fix**: `IsGameFocused()` confronta HWND diretto (`fw == _gameWindowHandle`) invece di `pid == _processId` — AllocConsole ha lo stesso PID del gioco, quindi con `pid` check la console faceva passare drag/click sul game window. Rimosso `_processId` e `GetWindowThreadProcessId` inutilizzati.
+
+### 19/05/2026 — Refactoring GameScreen + Performance Optimization
+
+**Refactoring (10 partial class file):**
+- `GameScreen.cs` splittato da 2 file (Commands 809L + Update 513L) a **10 file**, nessuno >250L
+- **Commands**: diviso in 5 file (basic, create, move, units, vision)
+- **Update/Draw/Info**: Update separato da Draw e PrintUnitInfo
+- Rimossa property `GetUnitRadius()` inline `UnitStats.GetBaseRadius()`
+
+**Performance:**
+- **Facing angle caching**: `MoveComponent.PrevTargetX/Y` — `Atan2` solo quando target cambia
+- **SpatialGrid Insert**: `CollectionsMarshal.GetValueRefOrAddDefault` — eliminato doppio dictionary lookup
+- **GetUnitRadius inline**: rimossa 1 indirezione, `UnitStats.GetBaseRadius()` diretto
+- **Unused import**: `GraphicsDevice` rimosso da `Update.cs`
+
+**Esplorato persistente (fix memory leak):**
+- Aggiunto `HashSet<long> _exploredCellKeys` — celle 200x200 marcate UNA volta per area
+- Sostituito `RemoveAt(0)` cap (perdeva aree vecchie) con deduplica cell-based
+- Memoria O(area esplorata) non O(tempo x unita) — mondo 100km2 circa 8MB
+- Nessuna perdita di esplorazione: cella marcata resta esplorata per sempre
+
+**Bug fix:**
+- Comando `team`: rimosso `[id]` in piu dalla usage string

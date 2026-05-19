@@ -350,7 +350,7 @@ public partial class GameScreen
         {
             if (args.Length < 2)
             {
-                System.Console.WriteLine("Usage: team <id|all> white|red|blue|green|yellow [id]");
+                System.Console.WriteLine("Usage: team <id|all> white|red|blue|green|yellow");
                 return;
             }
 

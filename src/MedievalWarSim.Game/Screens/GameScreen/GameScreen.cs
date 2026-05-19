@@ -49,8 +49,10 @@ public partial class GameScreen : IDisposable
     private RenderTarget2D? _rtFinal;
     private readonly List<(float wx, float wy, float radius)> _exploredCircles = new();
     private readonly HashSet<long> _exploredCellKeys = new();
-    private readonly float[] _lastExploredX = new float[MaxEntities];
-    private readonly float[] _lastExploredY = new float[MaxEntities];
+    private float[]? _lastExploredXStorage;
+    private float[]? _lastExploredYStorage;
+    private float[] _lastExploredX => _lastExploredXStorage ??= new float[MaxEntities];
+    private float[] _lastExploredY => _lastExploredYStorage ??= new float[MaxEntities];
     private int _rtW, _rtH;
     private static readonly BlendState FogBlend = new()
     {

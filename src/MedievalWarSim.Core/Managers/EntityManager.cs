@@ -128,6 +128,4 @@ public class EntityManager
 
     public bool IsAlive(int entityId)
         => (uint)entityId < (uint)MAX_ENTITIES && _alive[entityId];
-
-    public ReadOnlySpan<bool> Alive => _alive.AsSpan(0, _nextNew);
 }

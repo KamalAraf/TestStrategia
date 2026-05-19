@@ -74,7 +74,7 @@ public partial class GameScreen
                 float sx = (wx - _camera.X) * _camera.Zoom;
                 float sy = (wy - _camera.Y) * _camera.Zoom;
                 float sr = radius * _camera.Zoom;
-                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sr, new Color(180, 180, 180), Color.Transparent);
+                _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sr, new Color(180, 180, 180), Color.Transparent);
             }
             spriteBatch.End();
 
@@ -88,7 +88,7 @@ public partial class GameScreen
                 float sight = _entityManager.GetVision(i).SightRange * _camera.Zoom;
                 if (sx + sight < -DrawMargin || sx - sight > w + DrawMargin ||
                     sy + sight < -DrawMargin || sy - sight > h + DrawMargin) continue;
-                _shapeRenderer.DrawFilledCircle(spriteBatch, sx, sy, sight, Color.White, Color.Transparent);
+                _shapeRenderer.DrawCircle(spriteBatch, sx, sy, sight, Color.White, Color.Transparent);
             }
             spriteBatch.End();
 
