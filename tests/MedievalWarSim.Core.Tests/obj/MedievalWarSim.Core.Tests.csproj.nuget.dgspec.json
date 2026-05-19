@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj": {}
+    "C:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj": {}
   },
   "projects": {
-    "c:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj": {
+    "C:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj",
+        "projectUniqueName": "C:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj",
         "projectName": "MedievalWarSim.Core",
-        "projectPath": "c:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj",
+        "projectPath": "C:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj",
         "packagesPath": "C:\\Users\\kamal\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\obj\\",
+        "outputPath": "C:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -345,14 +345,14 @@
         }
       }
     },
-    "c:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj": {
+    "C:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj",
+        "projectUniqueName": "C:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj",
         "projectName": "MedievalWarSim.Core.Tests",
-        "projectPath": "c:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj",
+        "projectPath": "C:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj",
         "packagesPath": "C:\\Users\\kamal\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\obj\\",
+        "outputPath": "C:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -374,8 +374,8 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "c:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj": {
-                "projectPath": "c:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj"
+              "C:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj": {
+                "projectPath": "C:\\Users\\kamal\\TestStrategia\\src\\MedievalWarSim.Core\\MedievalWarSim.Core.csproj"
               }
             }
           }

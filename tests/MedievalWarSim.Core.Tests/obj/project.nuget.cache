@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "n9HXikHdn2U=",
+  "dgSpecHash": "f6UnS2LN6qk=",
   "success": true,
-  "projectFilePath": "c:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj",
+  "projectFilePath": "C:\\Users\\kamal\\TestStrategia\\tests\\MedievalWarSim.Core.Tests\\MedievalWarSim.Core.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\kamal\\.nuget\\packages\\microsoft.codecoverage\\17.14.1\\microsoft.codecoverage.17.14.1.nupkg.sha512",
     "C:\\Users\\kamal\\.nuget\\packages\\microsoft.net.test.sdk\\17.14.1\\microsoft.net.test.sdk.17.14.1.nupkg.sha512",

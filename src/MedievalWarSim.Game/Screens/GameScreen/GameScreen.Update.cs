@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MedievalWarSim.Core.Enums;
 using MedievalWarSim.Game;
+using MedievalWarSim.Game.Data;
 
 namespace MedievalWarSim.Screens;
 
@@ -382,7 +383,8 @@ public partial class GameScreen
                 Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
                 var stamina = _entityManager.GetStamina(i);
                 float t = 1f - stamina.CurrentStamina / stamina.MaxStamina;
-                Color unitColor = Color.Lerp(Color.Red, new Color(100, 100, 100), t);
+                Color baseColor = TeamColors.GetColor(_entityManager.GetTeam(i).Team);
+                Color unitColor = Color.Lerp(baseColor, new Color(100, 100, 100), t);
                 _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, unitColor, borderColor);
                 var hp = _entityManager.GetHealth(i);
                 if (hp.CurrentHP < hp.MaxHP && sr > 4f)
@@ -444,7 +446,8 @@ public partial class GameScreen
                 Color? borderColor = _selectedUnitIds.Contains(i) ? Color.Blue : null;
                 var stamina = _entityManager.GetStamina(i);
                 float t = 1f - stamina.CurrentStamina / stamina.MaxStamina;
-                Color unitColor = Color.Lerp(Color.Red, new Color(100, 100, 100), t);
+                Color baseColor = TeamColors.GetColor(_entityManager.GetTeam(i).Team);
+                Color unitColor = Color.Lerp(baseColor, new Color(100, 100, 100), t);
                 _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, unitColor, borderColor);
 
                 var hp = _entityManager.GetHealth(i);
@@ -499,6 +502,8 @@ public partial class GameScreen
         System.Console.WriteLine();
         System.Console.WriteLine($"  HP:        {hp.CurrentHP:F1}/{hp.MaxHP:F1}");
         var stamina = _entityManager.GetStamina(id);
+        var team = _entityManager.GetTeam(id);
+        System.Console.WriteLine($"  Team:      {team.Team}");
         System.Console.WriteLine($"  Speed:     {move.Speed:F1}");
         System.Console.WriteLine($"  Sight:     {vis.SightRange:F1}");
         System.Console.WriteLine($"  Stamina:   {stamina.CurrentStamina:F1}/{stamina.MaxStamina:F1}");

@@ -114,6 +114,7 @@ public partial class GameScreen : IDisposable
         };
         var rt = (UnitType)Random.Shared.Next(5);
         _entityManager.GetUnitType(id0) = new UnitTypeComponent { Type = rt };
+        _entityManager.GetTeam(id0) = new TeamComponent { Team = Team.White };
         _entityManager.GetMove(id0).Speed = UnitStats.RollSpeed(rt);
         _entityManager.GetVision(id0).SightRange = UnitStats.RollSightRange(rt);
         float hp = UnitStats.RollHP(rt);

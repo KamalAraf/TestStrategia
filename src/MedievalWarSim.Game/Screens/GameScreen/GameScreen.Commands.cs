@@ -167,18 +167,28 @@ public partial class GameScreen
         {
             if (args.Length == 0)
             {
-                System.Console.WriteLine("Usage: create random [count] | create <type> <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] [team] | create <type> <x> <y> [team]");
                 return;
             }
+
+            Team ParseTeam(string val)
+            {
+                if (int.TryParse(val, out int ti) && ti >= 0 && ti <= 4)
+                    return (Team)ti;
+                if (Enum.TryParse(val, true, out Team t))
+                    return t;
+                return Team.White;
+            }
+
+            Team defaultTeam = Team.White;
 
             if (args[0] == "random")
             {
                 int count = 1;
-                if (args.Length >= 2 && (!int.TryParse(args[1], out count) || count < 1))
-                {
-                    System.Console.WriteLine("Invalid count. Usage: create random [count]");
-                    return;
-                }
+                int argIdx = 1;
+                if (args.Length >= 2 && int.TryParse(args[1], out count) && count >= 1)
+                    argIdx = 2;
+                Team team = args.Length > argIdx ? ParseTeam(args[argIdx]) : defaultTeam;
 
                 int created = 0;
                 for (int n = 0; n < count; n++)
@@ -195,6 +205,7 @@ public partial class GameScreen
                     _entityManager.GetPosition(id) = new PositionComponent { X = rx, Y = ry };
                     var rt = (UnitType)Random.Shared.Next(5);
                     _entityManager.GetUnitType(id) = new UnitTypeComponent { Type = rt };
+                    _entityManager.GetTeam(id) = new TeamComponent { Team = team };
                     _entityManager.GetMove(id).Speed = UnitStats.RollSpeed(rt);
                     _entityManager.GetVision(id).SightRange = UnitStats.RollSightRange(rt);
                     float rhp = UnitStats.RollHP(rt);
@@ -204,7 +215,7 @@ public partial class GameScreen
                     created++;
                 }
 
-                System.Console.WriteLine($"Created {created} unit(s).");
+                System.Console.WriteLine($"Created {created} unit(s) ({team}).");
                 return;
             }
 
@@ -226,7 +237,7 @@ public partial class GameScreen
 
             if (args.Length < 3)
             {
-                System.Console.WriteLine("Usage: create random [count] | create <type> <x> <y>");
+                System.Console.WriteLine("Usage: create random [count] [team] | create <type> <x> <y> [team]");
                 return;
             }
 
@@ -235,6 +246,8 @@ public partial class GameScreen
                 System.Console.WriteLine("Invalid coordinates.");
                 return;
             }
+
+            Team team2 = args.Length >= 4 ? ParseTeam(args[3]) : defaultTeam;
 
             int newId = _entityManager.Create();
             if (newId < 0)
@@ -246,13 +259,14 @@ public partial class GameScreen
             _lastExploredY[newId] = -1000000f;
             _entityManager.GetPosition(newId) = new PositionComponent { X = cx, Y = cy };
             _entityManager.GetUnitType(newId) = new UnitTypeComponent { Type = parsedType };
+            _entityManager.GetTeam(newId) = new TeamComponent { Team = team2 };
             _entityManager.GetMove(newId).Speed = UnitStats.RollSpeed(parsedType);
             _entityManager.GetVision(newId).SightRange = UnitStats.RollSightRange(parsedType);
             float hp2 = UnitStats.RollHP(parsedType);
             _entityManager.GetHealth(newId) = new HealthComponent { MaxHP = hp2, CurrentHP = hp2 };
             float st2 = UnitStats.RollMaxStamina(parsedType);
             _entityManager.GetStamina(newId) = new StaminaComponent { MaxStamina = st2, CurrentStamina = st2, DrainRate = 0.2f, RecoveryRate = 1.0f };
-            System.Console.WriteLine($"Created {parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
+            System.Console.WriteLine($"Created {team2} {parsedType} unit {newId} at ({cx:F0}, {cy:F0}).");
         });
 
         _console.RegisterCommand("move", args =>
@@ -741,6 +755,54 @@ public partial class GameScreen
             else
             {
                 System.Console.WriteLine("Usage: stamina <id|all> add|remove|set|random [amount]");
+            }
+        });
+
+        _console.RegisterCommand("team", args =>
+        {
+            if (args.Length < 2)
+            {
+                System.Console.WriteLine("Usage: team <id|all> white|red|blue|green|yellow [id]");
+                return;
+            }
+
+            Team ParseTeam(string val)
+            {
+                if (int.TryParse(val, out int ti) && ti >= 0 && ti <= 4)
+                    return (Team)ti;
+                if (Enum.TryParse(val, true, out Team t))
+                    return t;
+                System.Console.WriteLine($"Unknown team: {val}. Valid: White, Red, Blue, Green, Yellow (or 0-4)");
+                return (Team)(-1);
+            }
+
+            string targetArg = args[0].ToLowerInvariant();
+            Team newTeam = ParseTeam(args[1]);
+            if ((int)newTeam < 0) return;
+
+            if (targetArg == "all")
+            {
+                int count = 0;
+                foreach (int i in _entityManager.ActiveEntities)
+                {
+                    _entityManager.GetTeam(i) = new TeamComponent { Team = newTeam };
+                    count++;
+                }
+                System.Console.WriteLine($"Set all {count} unit(s) to team {newTeam}.");
+            }
+            else if (int.TryParse(args[0], out int eid))
+            {
+                if (!_entityManager.IsAlive(eid))
+                {
+                    System.Console.WriteLine($"Unit {eid} does not exist.");
+                    return;
+                }
+                _entityManager.GetTeam(eid) = new TeamComponent { Team = newTeam };
+                System.Console.WriteLine($"Unit {eid} set to team {newTeam}.");
+            }
+            else
+            {
+                System.Console.WriteLine("Usage: team <id|all> white|red|blue|green|yellow");
             }
         });
     }

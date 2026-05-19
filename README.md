@@ -710,6 +710,21 @@ Before implementing the LOD system, development will focus on:
 - **README**: aggiornata tabella stats sezione 3, aggiunta tabella Combat Stats (AttackRange/Damage/Cooldown/DPS) sezione 4 con matchup 1v1
 - **UnitStats.cs**: allineato codice ai nuovi valori Speed/HP/Radius
 
+### 19/05/2026 — Team System (5 squadre colorate)
+
+- **Team enum**: `White, Red, Blue, Green, Yellow` in `Enums/Team.cs`
+- **TeamComponent**: struct con campo `Team` in `Components/TeamComponent.cs`
+- **EntityManager**: array `_teams` + `GetTeam()` getter
+- **TeamColors**: helper `TeamColors.GetColor(team)` → `Color`, in `Game.Data/TeamColors.cs` (5 colori: White, Red(200,60,60), Blue(60,100,220), Green(60,180,60), Yellow(220,200,40))
+- **Comando `create`**: ora accetta team opzionale come 4° argomento o dopo count in `create random`, default `White`
+  - `create Infantry 400 300` → White
+  - `create Infantry 400 300 Red` → Red
+  - `create random 10 Blue` → 10 unità random Blue
+- **Comando `team`**: `team <id|all> white|red|blue|green|yellow` (o 0-4)
+- **Rendering**: colore unità ora determinato dal team, stamina desaturation fluida sopra colore team (invece di `Color.Red` fisso)
+- **`info`**: mostra team dell'unità
+- **Stamina desaturation**: `Color.Lerp(teamColor, grey(100,100,100), 1 - stamina%)` — non più `Color.Red` fisso
+
 ### 19/05/2026 — Stamina System + Fix iterazione codice morto
 
 **Stamina System:**

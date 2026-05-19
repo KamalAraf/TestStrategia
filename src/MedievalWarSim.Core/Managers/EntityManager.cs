@@ -1,4 +1,5 @@
 using MedievalWarSim.Core.Components;
+using MedievalWarSim.Core.Enums;
 
 namespace MedievalWarSim.Core.Managers;
 
@@ -12,6 +13,7 @@ public class EntityManager
     private readonly HealthComponent[] _health;
     private readonly VisionComponent[] _visions;
     private readonly StaminaComponent[] _stamina;
+    private readonly TeamComponent[] _teams;
     private readonly bool[]           _alive;
 
     private readonly Stack<int> _freeSlots = new();
@@ -28,6 +30,7 @@ public class EntityManager
         _health = new HealthComponent[MAX_ENTITIES];
         _visions = new VisionComponent[MAX_ENTITIES];
         _stamina = new StaminaComponent[MAX_ENTITIES];
+        _teams = new TeamComponent[MAX_ENTITIES];
         _alive = new bool[MAX_ENTITIES];
         _activeEntities = new int[MAX_ENTITIES];
         _entityToIndex = new int[MAX_ENTITIES];
@@ -114,6 +117,13 @@ public class EntityManager
         if ((uint)entityId >= (uint)MAX_ENTITIES)
             throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
         return ref _stamina[entityId];
+    }
+
+    public ref TeamComponent GetTeam(int entityId)
+    {
+        if ((uint)entityId >= (uint)MAX_ENTITIES)
+            throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
+        return ref _teams[entityId];
     }
 
     public bool IsAlive(int entityId)
