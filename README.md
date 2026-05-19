@@ -1,126 +1,231 @@
 # Medieval War Simulation - Game Design Document
 
-## Platform and Technology
+## 1. Overview
 
-**Q: On what platform and in what language will the game be developed?**
+The game is a desktop application developed in C# with MonoGame, chosen for its excellent 2D performance, ability to handle hundreds of simultaneous units, strong ecosystem, and significantly lower complexity compared to C++ while maintaining near-equivalent performance.
 
-Desktop application. The developer is most comfortable with Python, C#, C++, and Java. After evaluation, C# with MonoGame was selected as the primary technology stack due to its excellent 2D performance, ability to handle hundreds of simultaneous units, strong ecosystem, and significantly lower complexity compared to C++ while maintaining near-equivalent performance.
+**Setting**: Medieval. All units, terrain, structures, and narrative elements are grounded in a medieval context.
 
----
+**Visual Perspective**: Top-down 2D. The camera looks straight down at the map. No isometric or side-scrolling perspective.
 
-## Setting
+**Time Flow**: Real-time. All units and factions move and act simultaneously at all times.
 
-**Q: What is the game's setting?**
+**Game Name**: Not yet decided. The name will be chosen once the game has taken sufficient shape during development.
 
-Medieval. All units, terrain, structures, and narrative elements are grounded in a medieval context.
+**Project Scope**: The game is a solo personal project maintained in a private GitHub repository. If development reaches a satisfactory level of quality, the game may be released publicly on a distribution platform, either free or as a paid title. All development will remain private until that point.
 
----
-
-## Time Flow
-
-**Q: Is the game real-time or turn-based?**
-
-Real-time. All units and factions move and act simultaneously at all times.
+**Performance Targets**: 100+ FPS with 2000+ units actively visible on screen, with the potential to scale to 10k+ total units through squad-level efficiency (formations, group LOD, dormant simulation). Performance benchmarking is part of every development phase to ensure targets are met before adding complexity. Entity system supports up to 100,000 entities (`MAX_ENTITIES = 100000`).
 
 ---
 
-## Visual Perspective
+## 2. Map & World
 
-**Q: What is the visual perspective?**
-
-Top-down 2D. The camera looks straight down at the map. No isometric or side-scrolling perspective.
-
----
-
-## Map Structure
-
-**Q: How is the map structured - grid, hexagons, or free movement?**
-
+### Map Structure
 Free movement with no underlying grid. Units move freely through space and are not constrained to tiles or hexagonal cells.
 
-## Map Creation
-
-**Q: How are maps created?**
-
+### Map Creation
 Campaign maps are hand-authored. Test/development maps are also hand-made initially. Procedural map generation is planned for a future phase.
 
-## Map Visual Style
-
-**Q: How do the map and territories look visually?**
-
-Map visuals use smooth, rounded borders (not pixelated) for terrain regions, provinces, and territories — similar in style to Pax Humana or War of Dots.
-
+### Map Visual Style
+Map visuals use smooth, rounded borders (not pixelated) for terrain regions, provinces, and territories, similar in style to Pax Humana or War of Dots.
 - Province borders are thin lines
 - Conquered/controlled territory borders are thicker lines in the faction's color
-- Provinces themselves are not filled with color — only the borders are colored
+- Provinces themselves are not filled with color -- only the borders are colored
 - Cities and other map features will be designed in a later phase
 
 The overall aesthetic is clean, abstract-geometric maps with well-defined smooth boundaries.
 
+### Terrain Types
+- **Hills**: Provide a vision bonus and a defensive bonus. Movement speed is reduced going uphill and increased going downhill. The mid-hill position is the optimal defensive location, balancing vision and protection.
+- **Mountains**: Similar to hills but with more severe movement penalties. They provide strong defensive positions and vision bonuses but are very difficult to traverse.
+- **Forests**: Reduce movement speed. Cavalry suffers an additional penalty in forests. Units inside forests are partially concealed from enemies. Concealment is not absolute; enemy units nearby have a probability-based chance of detecting a hidden unit, but they cannot identify its type. The hidden unit appears as a circle regardless of its actual type.
+- **Rivers**: Units can cross rivers at any point but doing so without a bridge is slow and weakens the unit temporarily. Cavalry cannot cross water at all and must use bridges. Bridges allow normal movement speed with no penalty.
+
+### Scale / Unit Count
+Both small and large scale depending on the context. Some missions or scenarios may involve small elite forces of ten to fifty units per side, while others may involve hundreds of units across multiple fronts simultaneously. The engine must support both extremes. Map sizes range from small to medium to enormous. A game session on a small map may conclude in a few hours of real time. A full session on an enormous map could last days or weeks of real time.
+
+### Zoom and Level of Detail
+Continuous zoom with configurable min and max limits. LOD transitions happen at defined zoom thresholds. At maximum zoom out, a large group of units appears as a single large icon representing the whole legion. Zooming in progressively reveals subgroups, and at full zoom individual units become visible and selectable. At full zoom the player can move individual soldiers. At maximum zoom out with no units visible in an area, only small dots indicate presence.
+
+**Zoom controls**: Mouse scroll wheel. Zoom limits: Min = 0.01x (fully zoomed out), Max = 1.0x (fully zoomed in), default = 0.5x. Scroll up = zoom in (x1.1), scroll down = zoom out (x0.9).
+
+### Visual Hierarchy Zoom LOD (Planned)
+1. **Soldier Level (1.0x to 0.25x)**: Focus on individual micro-management and combat. Full geometric shapes (polygons), individual rotations, health bars, and smooth borders. Direct control of every single unit.
+2. **Lieutenant Level (0.25x to 0.1x)**: Focus on squad-level operations (50-100 units). Individual soldiers fade into compact color blocks/formations. Medium-sized Lieutenant icons appear as primary tactical anchors. Individual HP bars are replaced by a single squad health indicator.
+3. **Strategic Level (0.1x to 0.01x)**: Focus on global theater and division maneuvers. Generals appear as large, prominent icons representing entire army wings (1000+ units). Army Chief appears as a small but visually unique/special icon (e.g., golden crown/eagle), smaller than Generals to emphasize the brain of the army over brute force. Map-wide perspective; only command figures and major movement vectors are rendered.
+
+### Pathfinding
+The pathfinding system uses a hierarchical approach with two layers. At the macro level, the map is divided into provinces (large regions) that units navigate between. Within each province, a localized spatial grid handles fine-grained movement. For groups, units follow the group leader in a loose formation rather than each unit calculating its own full path. The leader computes the macro-level route through provinces; individual units handle local obstacle avoidance within the spatial grid. Terrain types affect path costs at the spatial grid level, with hills, forests, rivers, and mountains each applying their respective movement speed modifiers and bonuses during path calculation.
+
 ---
 
-## Scale
+## 3. Units
 
-**Q: What is the expected scale of units in play?**
-
-Both small and large scale depending on the context. Some missions or scenarios may involve small elite forces of ten to fifty units per side, while others may involve hundreds of units across multiple fronts simultaneously. The engine must support both extremes.
-
----
-
-## Unit Types
-
-**Q: What unit types will be in the game?**
-
+### Unit Types
 Four primary combat unit types: infantry, archers, cavalry, and ballista. A fifth unit type, the war medic, exists as a secondary support role. Each type has distinct strengths, weaknesses, speed, range, and behavior.
 
-Stat relationships (relative — exact values to be defined later):
+**Stat relationships** (relative, exact values to be defined later):
 - **Infantry**: Balanced all-around stats. No extreme strengths or weaknesses.
 - **Archers**: Long attack range, slow movement speed. Vulnerable in melee.
 - **Cavalry**: Very fast, high dodge/evasion chance. Strong against archers and ballistas. Weak against infantry in melee. Reduced effectiveness in forests.
 - **Ballista**: Extremely high damage (one-shots most units). Very slow movement and reload. Vulnerable when unprotected.
 - **War Medic**: Fast movement, very low combat stats, can fight but deals minimal damage. Primary role is healing support.
 
+### Unit Stats (Current Implementation)
+
+| Unit | Shape | Radius | Speed | Vision Range | Base HP | Base Stamina |
+|---|---|---|---|---|---|---|
+| Infantry | Square | 30px | 160 px/s | 1500px | 110 | 100 |
+| Archer | Triangle | 28px | 180 px/s | 2250px | 60 | 100 |
+| Cavalry | Pentagon | 40px | 500 px/s | 3000px | 90 | 100 |
+| Ballista | Octagon | 55px | 50 px/s | 2250px | 150 | 100 |
+| Medic | Hexagon | 28px | 200 px/s | 1500px | 80 | 100 |
+
+Each stat has a +-5% random variance on creation, rolled via `UnitStats.Roll*()`.
+
+### Visual Design (Shapes per Type)
+Units are represented by geometric shapes. The same shapes are used for both player and enemy units; color is the primary distinguishing factor. Shapes were refactored on 17/05 to the following current mapping:
+- Infantry: Square (quadrato)
+- Archer: Triangle (triangolo)
+- Cavalry: Pentagon (pentagono)
+- Ballista: Octagon (ottagono)
+- Medic: Hexagon (esagono)
+
+Unit color is determined by team (see Factions & Teams section): White team = white, Red team = red, Blue team = blue. Stamina desaturation is applied on top of the team color. Any unit that is hidden or partially concealed by terrain or fog of war appears as a plain circle, regardless of its actual type. The player can identify the unit type of a hidden enemy only after getting close enough with their own units.
+
+### Commander Rank Visual Indicators
+Commander rank is indicated by visual borders added to the base shape:
+- Soldier: Plain shape with no border
+- Capogruppo (Group Leader): Shape with one border
+- Luogotenente (Lieutenant): Shape with two borders
+- Generale (General): Shape with two borders and a star
+- Capo dell'Esercito (Army Chief): Shape with unique special borders distinct from all other ranks
+
+Enemy commanders are only identifiable when spotted at close range with adequate visibility.
+
+### Facing Direction
+In the initial implementation, facing direction is purely visual (units rotate toward their movement direction). Vision range is a circle radius. Unit facing direction and its effects on combat (e.g., flanking/rear bonuses) and vision (directional cones) are planned for a future phase of development.
+
+### Vision Range
+Yes to both different vision ranges per type and identification at range. Each unit type has its own vision radius. Identifying what a spotted unit actually is requires being close enough. From a long distance, a player's units may detect that something is present but cannot determine its type. Hidden units always appear as plain circles until identified. Vision range is a circle radius for the current implementation. A directional cone based on the unit's facing direction will be considered for a future phase.
+
+### War Medic
+The war medic is a support unit that can be assigned to a group, in which case it automatically heals nearby wounded units within its radius. It can also be used as a standalone unit and directed manually to specific targets. Not every group is required to have a medic; it is an optional assignment. While healing, the medic must remain stationary. It cannot heal and move at the same time. The medic can heal multiple units simultaneously up to the limit defined by its healing radius. Healing time is proportional to how much damage the target has taken. A unit with nearly full health may recover in as little as twelve hours of game time. A unit near zero health may require up to fourteen game days to fully recover. This makes medics strategically valuable and their protection a tactical priority.
+
+### Cavalry in Terrain
+Cavalry is the fastest unit on open ground but is fragile in sustained combat. It is weaker against infantry and takes longer to kill them (20s) than infantry needs to kill cavalry (11.3s). Cavalry excels at chasing down archers and ballistas due to its speed advantage. In forests, cavalry suffers additional movement and efficiency penalties. Cavalry cannot cross rivers through water at all and must use bridges exclusively.
+
 ---
 
-## Combat Mode Toggle
+## 4. Combat
 
-**Q: Is combat automatic or manually triggered?**
+### Combat Stats (Attack Values)
 
-The player can toggle between stances per unit or group:
+| Unit | Attack Range | Damage | Cooldown | DPS | Type |
+|---|---|---|---|---|---|
+| Infantry | 35 (melee) | 8 | 1.0s | 8 | Melee, beats cavalry |
+| Archer | 400 (ranged) | 5 | 1.5s | 3.3 | Ranged, lightly armored |
+| Cavalry | 35 (melee) | 5 | 1.0s | 5 | Melee, fragile, beats ranged |
+| Ballista | 600 (ranged) | 80 | 5.0s | 16 | Siege, 1-2 shot most units |
+| Medic | 80 (heal) | 0 | — | — | Support, heals only |
 
-- **Attack mode**: units automatically attack any enemy that enters their attack range. When moving in attack mode, units stop to fight enemies they encounter and resume moving after the threat is eliminated.
-- **Hold mode**: units do not initiate attacks but will counter-attack if directly attacked. Units in hold mode do not retreat automatically; retreat must be explicitly ordered.
-- **Move mode**: units focus on movement and ignore enemies, but if attacked, the unit counter-attacks. If a squad is moving and one unit is attacked, the entire squad joins to defend and counter-attack.
+All damage is flat (no armor in initial implementation). Targets have no damage reduction. Planned for future: armor/penetration system, charge bonus for cavalry.
 
-This system is modeled after the stance system in Hearts of Iron IV.
+**Matchup outcomes (1v1, equal skill):**
+- Infantry vs Cavalry: Infantry wins (11.3s vs 20s) -- spears beat cavalry
+- Cavalry vs Archer: Cavalry wins (12s vs 32s) -- fast catch
+- Archer vs Infantry (kiting): Archer wins if space to retreat (180 > 160 speed)
+- Ballista vs Archer/Ballista vs Medic: 1-hit kill (80 > 60/80)
+- Ballista vs Infantry/Cavalry/Ballista: 2-hit kill (160 > 110/90/150)
+
+### Stances
+The player can toggle between stances per unit or group, modeled after the stance system in Hearts of Iron IV:
+- **Attack mode**: Units automatically attack any enemy that enters their attack range. When moving in attack mode, units stop to fight enemies they encounter and resume moving after the threat is eliminated.
+- **Hold mode**: Units do not initiate attacks but will counter-attack if directly attacked. Units in hold mode do not retreat automatically; retreat must be explicitly ordered.
+- **Move mode**: Units focus on movement and ignore enemies, but if attacked, the unit counter-attacks. If a squad is moving and one unit is attacked, the entire squad joins to defend and counter-attack.
+
+Default stance options for a selected group: Hold/Defensive (units hold position with shields up, defensive bonus), Attack (engage aggressively), Retreat (ordered withdrawal, details to be defined).
+
+### Melee Collision
+Units have a small collision radius -- they cannot overlap and maintain a minimum distance from each other. Melee combat requires units to be adjacent (within their attack reach). Ranged units engage from their respective weapon range. Multiple units can attack or target the same enemy simultaneously. The player can configure how densely units should position themselves (spread out vs. tight formation), affecting both collision spacing and combat engagement distances.
+
+### Combat Calculation
+Combat uses numeric formulas with probability and random factors. Each unit has stats (attack power, defense, health) that interact with the target's type and current state.
+
+**Hit chance** depends on multiple factors: the attacker's unit type, the target's unit type (e.g., cavalry has reduced hit chance against infantry in melee), range, terrain, fatigue level, and morale status. A random roll determines if the attack lands.
+
+When a hit lands, **damage is direct** (flat reduction to the target's health), modified by the attacker's attack stat versus the target's defense stat, plus a small random variance. Wounded units deal and receive modified damage proportional to their remaining health.
+
+### Ballista Mechanics
+The ballista is extremely powerful but very slow to move and requires time to reload between shots. It excels against densely packed groups of units. A direct hit on a single unit kills it instantly. A shot that travels through a line of units kills those in the path sequentially. A shot that hits a line of shielded units kills the first two and leaves the third critically wounded. Cavalry hit by a ballista bolt is killed. Due to its power, the ballista is best used by carefully targeting dense formations or specific high-value units such as commanders. Its movement speed makes repositioning during a battle very difficult.
+
+**Ballista targeting**: The player can fire manually by right-clicking a target, or the ballista can fire automatically when in attack/move mode. In hold mode it does not fire automatically -- only manual orders work.
+
+### Archer Targeting
+Archers follow the same stance-based targeting as other units:
+- Attack / Move mode: auto-target enemies in range
+- Hold mode: do not auto-attack, only counter-attack if attacked, plus manual fire orders
+
+The player can also manually order archers to fire at a specific target regardless of stance.
+
+### Projectile Visibility
+At high zoom levels, arrows appear as very small fast-moving lines that are barely visible. At lower zoom levels, projectiles are not rendered and damage simply appears on the target. Arrow damage is constant regardless of distance, but accuracy decreases as range increases, giving archers a lower probability of hitting targets at maximum range.
+
+### Visual Feedback in Combat
+When a unit takes damage, the border of its geometric shape briefly flashes dark red. There are no particle effects, blood, or complex animations, consistent with the abstract geometric visual style. When a unit dies, its shape remains on the battlefield as a darkened or greyed-out silhouette for a few seconds before disappearing entirely.
+
+### Wounded Penalties
+A unit's combat effectiveness and movement speed decrease proportionally with its remaining health. A unit at fifty percent health is significantly slower and weaker than one at full health. This makes the war medic a strategically important unit rather than a secondary consideration.
+
+### Permanent Death
+No. Death is permanent. Every unit lost in battle is gone for the rest of the game or mission. This makes every tactical decision carry real weight.
 
 ---
 
-## Fog of War
+## 5. Command & Organization
 
-**Q: Is there fog of war?**
+### Command Hierarchy
+From lowest to highest rank:
+1. Soldier - standard unit, no special indicator
+2. Capogruppo (Group Leader) - manages a small group
+3. Luogotenente (Lieutenant) - manages multiple groups
+4. Generale (General) - manages multiple lieutenants and their forces
+5. Capo dell'Esercito (Army Chief) - commands the entire army, only one permitted at a time
 
-Yes. Each unit has its own vision radius. Areas outside the combined vision of all player units are hidden. The fog of war also applies to the minimap, where unexplored or currently invisible areas appear dark.
+The Capo dell'Esercito is mandatory. All other command ranks are optional and assigned by the player as needed. Having no commanders means units are less coordinated. A single army chief without subordinate commanders is possible but limits large-scale coordination. The player designs the command structure to suit their strategy.
+
+### Detailed Command Assignment
+Any unit can be promoted to a commander rank. The Army Chief is mandatory; all other ranks are optional and assigned by the player.
+
+Each rank provides:
+- **Capo dell'Esercito (Army Chief)**: Highest stats (slightly above General), provides a bonus radius within its own group and surrounding area. Can issue global stance orders (expand, hold, attack-move, etc.) that propagate to every unit in the army. Must be designated from a non-engaged group; death causes massive army-wide morale loss and requires 3+ in-game days to replace.
+- **Generale (General)**: Moderate stats, issues orders to all groups under their command. If General says hold, all units in their command chain hold.
+- **Luogotenente (Lieutenant)**: Lower stats, controls multiple groups. Orders apply only to groups directly under them.
+- **Capogruppo (Group Leader)**: Small bonus to their own group only.
+- **Soldier**: No command ability.
+
+Orders flow top-down. A higher-ranking order overrides lower ones. The player can issue orders at any level of the hierarchy.
+
+### Command Bonuses
+Commanders provide bonuses within a small physical radius around them on the map. The bonus applies to units nearby regardless of group assignment. As rank increases, the quality of the bonus changes, but the radius remains small, meaning the physical position of the commander on the battlefield is tactically important. Commanders higher up in the hierarchy still belong to a specific group and position on the map; their bonus does not apply army-wide from anywhere.
+
+### Army Chief Death
+The army chief's death causes a massive army-wide morale loss. The player must then appoint a new army chief. To do so, a unit must be designated from a group that is not currently engaged in active combat. The new chief can be any unit type: a regular soldier, a group leader, a lieutenant, or a general if one exists. The appointment cannot happen instantly; it takes a set number of in-game days. During this period the army operates without a chief, compounding the morale loss. In campaign mode, the consequences of the army chief's death may also be defined by the specific mission parameters.
+
+### Army Chief Role
+Yes, the army chief can engage in direct combat as a standard unit of its type while also providing command bonuses to nearby units. Using the chief in combat carries the risk of losing the most important command figure in the army.
+
+### Legions and Grouping
+Any number of units from two upward can be grouped into a legion. The player can define the internal order of the legion (e.g., cavalry in front, infantry behind). The player manually positions units to form their own formation -- there is no preset formation grid. When moving, the group travels together in the order the player defined. Specific formation types (line, column, wedge, etc.) are still to be designed. Multiple squads can be grouped into higher-level formations based on the command hierarchy. Legions persist until disbanded; the player can disband and reassign them freely. Groups can also be merged with other groups or individual units, and can be disbanded at any time.
+
+### Hierarchy Tree Panel
+The panel shows an expandable/collapsible tree of all legions and their subgroups (similar to Windows Explorer tree view). It does not show individual units -- the player must use the map to see individual units after selecting a legion. Each legion entry displays the legion name (defaults to the commander's name, changeable by the player) and its commander rank. Clicking a legion entry selects it and can center the camera on it. It is part of the collapsible HOI4-style panel system.
 
 ---
 
-## Terrain Types
+## 6. Controls & UI
 
-**Q: Does terrain affect gameplay?**
-
-Yes. The following terrain types exist and affect movement, vision, and combat:
-
-- Hills: Provide a vision bonus and a defensive bonus. Movement speed is reduced going uphill and increased going downhill. The mid-hill position is the optimal defensive location, balancing vision and protection.
-- Mountains: Similar to hills but with more severe movement penalties. They provide strong defensive positions and vision bonuses but are very difficult to traverse.
-- Forests: Reduce movement speed. Cavalry suffers an additional penalty in forests. Units inside forests are partially concealed from enemies. Concealment is not absolute; enemy units nearby have a probability-based chance of detecting a hidden unit, but they cannot identify its type. The hidden unit appears as a circle regardless of its actual type.
-- Rivers: Units can cross rivers at any point but doing so without a bridge is slow and weakens the unit temporarily. Cavalry cannot cross water at all and must use bridges. Bridges allow normal movement speed with no penalty.
-
----
-
-## Controls
-
-**Q: What are the basic controls?**
-
+### Controls (Basic)
 - **Left-click**: select unit
 - **Left-click drag box**: select multiple units
 - **Right-click on ground**: move selected units to position
@@ -130,425 +235,174 @@ Yes. The following terrain types exist and affect movement, vision, and combat:
 - **Shift+click** (or alternative key, TBD): queue orders
 - **Right-click with selection > "Create squad"**: create legion from selected units
 
-## Unit Selection
-
-**Q: How is unit selection handled?**
-
+### Unit Selection
 - **Single click**: selects one unit
-- **Drag box**: selects all units within the drawn rectangle
+- **Drag box**: selects all units within the drawn rectangle (small drags < 5px register as clicks / unit toggle)
 - **Ctrl+click**: adds/removes a unit from the current selection
 
-Multiple squads can be grouped into higher-level formations based on the command hierarchy ranks (names to be defined). Legions persist until disbanded; the player can disband and reassign them freely. Groups can also be merged with other groups or individual units, and can be disbanded at any time.
+Hotkeys (Ctrl+1,2,3...) for saving and recalling group selections.
 
-Hotkeys (Ctrl+1,2,3...) for saving and recalling group selections will be supported. A **hierarchy tree panel** (brush/tree style) shows all groups and their nested structure for quick overview and management.
+### Camera Controls
+- WASD or arrow keys
+- Middle mouse button drag
+- Edge scrolling (mouse at screen edge)
+- Click on minimap to pan
 
----
+Additional camera features (to be confirmed): follow/center mode that tracks the selected unit or group when issued from the map or hierarchy panel.
 
-## Legions and Grouping
+### HUD Layout
+The HUD is designed to be clean, orderly, and intuitive:
+- **Top-right**: Minimap (clickable to expand to full-screen map view)
+- **Left side**: Unit information panel, hierarchy tree panel, prisoner panel, and other secondary panels (collapsible, HOI4-style)
+- **Center**: Main game map / viewport
 
-**Q: How do legions work in terms of movement and formation?**
+Primary information (minimap, selected unit info) is always visible and prominent. Secondary panels (hierarchy tree, prisoners, morale overview) are accessible but do not clutter the default view. Specific positioning of remaining elements is still to be decided, with cleanliness as the guiding principle.
 
-Any number of units from two upward can be grouped into a legion. The player can define the internal order of the legion (e.g. cavalry in front, infantry behind). The player manually positions units to form their own formation — there is no preset formation grid.
+### Minimap
+The minimap shows the full map with terrain and fog of war (only visible areas are displayed). It is clickable to pan the camera.
 
-Default stance options for a selected group:
-- **Hold / Defensive**: units hold position with shields up, defensive bonus
-- **Attack**: units engage enemies aggressively
-- **Retreat**: ordered withdrawal (details to be defined)
+Displayed content depends on zoom level:
+- At maximum zoom: individual units are shown as dots
+- At medium zoom: only group leaders (Capogruppo) are shown
+- At higher zoom: Luogotenente (small icons), Generale (medium icons), Capo dell'Esercito (large icon)
+- At maximum zoom out: only the Army Chief icon and large legion indicators are visible
 
-When moving, the group travels together in the order the player defined. Specific formation types (line, column, wedge, etc.) are still to be designed.
+The minimap also shows a viewport rectangle indicating the current camera position and a red exclamation mark alert for groups at risk of surrendering.
 
----
-
-## Unit Information Panel
-
-**Q: How is unit information displayed?**
-
+### Unit Information Panel
 When a single unit is selected, a panel displays that unit's individual statistics. When a group is selected, a panel displays the group's collective information. If only part of a group is selected, only that portion's information is shown. Health values are simple and readable. The player cannot see the health or status of enemy units unless those enemies are in direct close-range combat with the player's own units that have full line of sight.
 
----
+### User Interface Philosophy
+The interface is designed to be simple and approachable for new players but progressively reveals complexity as the player engages deeper systems. All panels are collapsible and toggleable in a style similar to Hearts of Iron IV. The currently planned panels are: the unit and group hierarchy tree, the minimap, the morale overview, the selected unit or group information panel, and the prisoner management panel. Additional panels may be added as development progresses.
 
-## Permanent Death
+### Hotkeys
+Hotkey remapping will be implemented in a future phase of development.
 
-**Q: Do units respawn after death?**
+### Screen Modes
+Three display modes:
+- **Fullscreen**: exclusive fullscreen at native resolution
+- **Fullscreen (borderless windowed)**: with taskbar visible
+- **Windowed**: fixed size (smaller than fullscreen, e.g., 1440x920 or similar that maintains proper aspect ratio)
 
-No. Death is permanent. Every unit lost in battle is gone for the rest of the game or mission. This makes every tactical decision carry real weight.
+The window is not freely resizable by the user. The UI scales to fit the selected resolution while maintaining aspect ratio.
 
----
+### Loading Screens
+Yes. Loading screens appear during transitions (menu to game, between missions, loading saves). They are minimal but polished -- showing a loading indicator and possibly a simple visual or tip, given that save files may take some time to load.
 
-## Resources
+### Main Menu
+Yes, but it will be implemented in a later phase. The initial focus is entirely on core gameplay mechanics.
 
-**Q: Are there resources to manage?**
+### Settings
+Graphics quality is fixed at a low level for the initial implementation and may be expanded later. Volume controls and FPS cap settings will also be added in a later phase. Default language is English for initial development. Italian and additional languages will be added later.
 
-Not in the initial implementation. Future versions may include gold, passive food generation, and a dynamic reinforcement system where the arrival rate and quantity of reinforcements depends on player actions such as attacking, defending, or remaining stationary, combined with a randomness factor.
+### Fonts
+For the initial implementation, a clean, clearly readable sans-serif font (e.g., a standard system font or a freely licensed alternative like Open Sans or Roboto). Font styling and themed fonts (medieval-style, etc.) will be considered in a later visual polish phase.
 
----
+### Language Support
+English and Italian from the start. Additional languages may be added after the core game is stable.
 
-## Morale System
+### Development Console
+A developer console accessible in-game (toggleable hotkey) provides:
+- **FPS overlay** always available
+- **Commands**: spawn units, delete units, set unit state/stance/team, teleport, change morale/stamina/health, trigger events, and other debug operations
+- Console is available during development builds only
 
-**Q: Is there a morale system?**
+### Tutorial
+No tutorial is planned for the current phase. Players are expected to explore the mechanics independently. Tooltips and a manual are not planned for the initial implementation -- they may be considered in a future phase.
 
-Yes. Each group or legion has its own independent morale value. Morale decreases when a group is surrounded, slowed, taking heavy casualties, or near its breaking point. At critically low morale, a group becomes less efficient in combat and risks surrendering entirely. When a group surrenders, the player loses control of that front.
+### Multiplayer
+Multiplayer is not planned for the initial release. After the single-player game is stable and bugs are resolved, offline multiplayer (hot-seat or shared-screen with save sharing) may be considered -- allowing friends to play in sandbox mode, cooperatively on the same nation, or as opposing nations.
 
-Morale is hierarchical. Groups that are part of a larger command structure share an approximate average morale plus a multiplier based on the main legion that contains the commanding officer. Low morale in subgroups slightly affects the morale of the parent group above them.
-
-When a group is at risk of surrendering, a red exclamation mark alert appears on the minimap, similar to the missile warning system in Jetpack Joyride. The player must notice and respond without the game pausing or forcing attention.
-
-The player can also choose to surrender units intentionally. Captured prisoners can be converted into resources, labor that generates passive output, or new troops.
-
----
-
-## Base Building
-
-**Q: Can the player build structures?**
-
-Base building is restricted to the sandbox and freeplay modes only. In campaign and story missions, gameplay is limited to pure field combat with no construction. The one exception is constructible bridges and camps, which are available in all modes.
-
----
-
-## Technology Choice
-
-**Q: Which language and framework was chosen and why?**
-
-C# with MonoGame. It offers excellent 2D rendering performance, handles large numbers of simultaneous entities well, has a mature and stable ecosystem, and is significantly simpler to work with than C++ while losing almost no performance for this type of project. Python was ruled out due to performance limitations with hundreds of units.
-
-## Technology Stack — Detailed
-
-**Q: What is the specific technology stack?**
-
-- **Runtime**: .NET 8 (LTS) — stable, cross-platform, good performance
-- **Framework**: MonoGame 3.8.x — mature 2D engine
-- **UI**: Custom UI system built on MonoGame SpriteBatch (no external UI library) — full control over HOI4-style collapsible panels, hierarchy tree, and minimap
-- **ECS Architecture**: Optional — may use an ECS library (e.g. Arch or DefaultEcs) for managing hundreds of units if performance requires it; otherwise plain GameObject composition
-- **Serialization**: System.Text.Json for save files and configuration data
-- **Audio**: MonoGame's built-in audio (SoundEffect) — deferred to future phase
-- **Input**: MonoGame's built-in Keyboard, Mouse input handling
-- **Content Pipeline**: MonoGame Content Pipeline (.mgcb) for asset management
-- **Rendering**: SpriteBatch for 2D drawing of geometric shapes, terrain, and UI
-
----
-
-## Audio
-
-**Q: Will the game have sound?**
-
+### Audio
 Not in the current phase. Sound effects and music may be added in a future phase of development.
 
 ---
 
-## Unit Visual Design
+## 7. Game Systems
 
-**Q: How are units represented visually?**
+### Time System
+Five real-world minutes equals one in-game day. Movement distances are realistic relative to this scale; for example, a march equivalent to the distance between Rome and Vicenza would take between ten and fifteen in-game days depending on unit speed and terrain.
 
-Units are represented by geometric shapes. The same shapes are used for both player and enemy units; color is the primary distinguishing factor. Each shape represents a unit type:
+### Time Speed Controls
+The player can set time to any of the following speeds at any moment: 0 (paused), 1/8, 1/4, 1/2, 1, 2, 4, or 8 times normal speed. At 1x speed one day lasts five real minutes. At 1/8 speed one day lasts approximately forty real minutes, enabling deep strategic play. At 8x speed one day lasts approximately thirty-seven seconds, suitable for rapid resolution of low-intensity periods.
 
-- Infantry: Pentagon
-- Cavalry: Triangle
-- Ballista: Octagon
-- Archers: Hexagon
-- War Medic: To be defined
+### Save System
+Both manual and automatic saving are supported. Multiple save slots are available. Save files use JSON format (via System.Text.Json) for readability and ease of debugging. Every state necessary to resume a session is saved: unit positions, health, status, morale, fatigue, command hierarchy, legion assignments, diplomacy state, territory control, fog of war progress, construction progress, and all other relevant data.
 
-Enemy units use shades of blue. Player units use shades of red. Any unit that is hidden or partially concealed by terrain or fog of war appears as a plain circle, regardless of its actual type. The player can identify the unit type of a hidden enemy only after getting close enough with their own units.
+### Fog of War
+Yes. Each unit has its own vision radius. Areas outside the combined vision of all player units are hidden. The fog of war also applies to the minimap, where unexplored or currently invisible areas appear dark. Hidden units always appear as circles until identified.
 
-Commander rank is indicated by visual borders added to the base shape:
+The fog of war implementation uses a CPU circle list approach (accumulated circles at 50 WU coarseness) after multiple iterations: GPU multi-RT, ping-pong RT, CPU low-res 1/3, GPU ping-pong full-res, world-space fog RT were each attempted before settling on the current CPU circle list approach which has no world limits, no GPU texture, no SetData stall, and perfect zoom/pan.
 
-- Soldier: Plain shape with no border
-- Capogruppo (Group Leader): Shape with one border
-- Luogotenente (Lieutenant): Shape with two borders
-- Generale (General): Shape with two borders and a star
-- Capo dell'Esercito (Army Chief): Shape with unique special borders distinct from all other ranks
+### Morale System
+Yes. Each group or legion has its own independent morale value. Morale decreases when a group is surrounded, slowed, taking heavy casualties, or near its breaking point. At critically low morale, a group becomes less efficient in combat and risks surrendering entirely. When a group surrenders, the player loses control of that front.
 
-Enemy commanders are only identifiable when spotted at close range with adequate visibility.
+Morale is hierarchical. Groups that are part of a larger command structure share an approximate average morale plus a multiplier based on the main legion that contains the commanding officer. Low morale in subgroups slightly affects the morale of the parent group above them.
 
----
+When a group is at risk of surrendering, a red exclamation mark alert appears on the minimap, similar to the missile warning system in Jetpack Joyride. The player must notice and respond without the game pausing or forcing attention. There is no forced pause or pop-up interruption. The player must monitor the minimap actively and respond on their own initiative.
 
-## Game Modes
+The player can also choose to surrender units intentionally. Captured prisoners can be converted into resources, labor that generates passive output, or new troops.
 
-**Q: What game modes will be available and how do you win/lose?**
-
-Three modes:
-
-1. **Campaign**: story-driven missions on a world map with branching paths. Each mission has its own specific victory and defeat conditions (to be defined per mission).
-
-2. **Versus-AI Skirmish**: single-map battles with defined objectives.
-
-3. **Sandbox**: permanent free-play mode with AI opponents. No victory or game over condition — the player can continue observing even after losing all units, watching other factions interact.
-
-4. **Freeplay**: like sandbox, but with win/lose conditions. The player wins by controlling 70% of all territories (including allies and puppets) while not at war. Game over occurs if the player is fully conquered. However, if a peace treaty leaves the player as an independent nation or puppet with reduced territory, the game continues.
-
----
-
-## Zoom and Level of Detail
-
-**Q: How does zoom affect what is displayed?**
-
-The display uses a level of detail system based on zoom level. At maximum zoom out, a large group of units appears as a single large icon representing the whole legion. Zooming in progressively reveals subgroups, and at full zoom individual units become visible and selectable. At full zoom the player can move individual soldiers. At maximum zoom out with no units visible in an area, only small dots indicate presence.
-
-**Zoom controls**: Mouse scroll wheel. Continuous zoom between configurable min and max limits. LOD transitions happen at defined zoom thresholds.
-
----
-
-## Campaign Structure
-
-**Q: How is the campaign structured?**
-
-The campaign uses a series of missions with branching paths, presented on a World Conqueror 4-style world map. The player can see and navigate between territories. Each mission is fresh: nothing is carried over between missions — no global resources, upgrades, or tech trees.
-
-The world map uses provinces with defined territory borders and capitulation conditions. Units belong to provinces but can move freely within them (no grid). Territory control works similarly to War of Dots — units conquer and control territory by presence.
-
-Missions have varied objectives including capturing a specific point, defending for a set duration, escorting the commanding officer, eliminating all enemy forces, and combinations of these objectives.
-
----
-
-## Story and Narrative
-
-**Q: Is the story defined?**
-
-Not yet. Story, narrative, and campaign-specific content will be designed after the core mechanics, unit systems, and terrain systems are fully implemented and stable.
-
----
-
-## War Medic
-
-**Q: How does the war medic work?**
-
-The war medic is a support unit that can be assigned to a group, in which case it automatically heals nearby wounded units within its radius. It can also be used as a standalone unit and directed manually to specific targets. Not every group is required to have a medic; it is an optional assignment.
-
-While healing, the medic must remain stationary. It cannot heal and move at the same time. The medic can heal multiple units simultaneously up to the limit defined by its healing radius.
-
-Healing time is proportional to how much damage the target has taken. A unit with nearly full health may recover in as little as twelve hours of game time. A unit near zero health may require up to fourteen game days to fully recover. This makes medics strategically valuable and their protection a tactical priority.
-
----
-
-## Ballista Mechanics
-
-**Q: How does the ballista work in combat?**
-
-The ballista is extremely powerful but very slow to move and requires time to reload between shots. It excels against densely packed groups of units. A direct hit on a single unit kills it instantly. A shot that travels through a line of units kills those in the path sequentially. A shot that hits a line of shielded units kills the first two and leaves the third critically wounded. Cavalry hit by a ballista bolt is killed. Due to its power, the ballista is best used by carefully targeting dense formations or specific high-value units such as commanders. Its movement speed makes repositioning during a battle very difficult.
-
-**Ballista targeting**: The player can fire manually by right-clicking a target, or the ballista can fire automatically when in attack/move mode. In hold mode it does not fire automatically — only manual orders work.
-
----
-
-## Morale Alerts
-
-**Q: How is the player notified of morale crises?**
-
-A red exclamation mark icon appears on the minimap at the location of the group in crisis. There is no forced pause or pop-up interruption. The player must monitor the minimap actively and respond on their own initiative.
-
----
-
-## Prisoner Management
-
-**Q: How are prisoners managed?**
-
-Prisoners are tracked in a dedicated secondary panel accessible from the main panel list, consistent with the collapsible HOI4-style interface. The panel shows current prisoner count and their output in resources, labor, or potential troop conversion.
-
----
-
-## Vision and Unit Identification
-
-**Q: Do different unit types have different vision ranges, and can units always identify what they see?**
-
-Yes to both. Each unit type has its own vision radius. Identifying what a spotted unit actually is requires being close enough. From a long distance, a player's units may detect that something is present but cannot determine its type. Hidden units always appear as plain circles until identified.
-
----
-
-## Cavalry in Terrain
-
-**Q: How does cavalry interact with terrain?**
-
-Cavalry moves faster than all other units on open ground and deals higher general damage. However, it is weaker against infantry and takes increased damage in melee engagements with foot soldiers. Cavalry deals bonus damage against archers and ballistas. In forests, cavalry suffers additional movement and efficiency penalties. Cavalry cannot cross rivers through water at all and must use bridges exclusively.
-
----
-
-## Archer Targeting
-
-**Q: How do archers target enemies?**
-
-Archers follow the same stance-based targeting as other units:
-- **Attack / Move mode**: auto-target enemies in range
-- **Hold mode**: do not auto-attack, only counter-attack if attacked, plus manual fire orders
-
-The player can also manually order archers to fire at a specific target regardless of stance.
-
----
-
-## Projectile Visibility
-
-**Q: Are arrows and ballista projectiles visible?**
-
-At high zoom levels, arrows appear as very small fast-moving lines that are barely visible. At lower zoom levels, projectiles are not rendered and damage simply appears on the target. Arrow damage is constant regardless of distance, but accuracy decreases as range increases, giving archers a lower probability of hitting targets at maximum range.
-
----
-
-## Stamina and Fatigue
-
-**Q: Is there a stamina or fatigue system?**
-
+### Stamina / Fatigue
 Yes. Units that march or fight for extended periods accumulate fatigue, which reduces their movement speed and combat effectiveness proportionally. Units can recover stamina by resting inside an encampment.
 
 Fatigue is visible through color saturation. Player units are displayed in bright red at full stamina and progressively fade to a dull, desaturated red as they tire. Enemy units follow the same logic using blue. The enemy unit's fatigue state is only visible when they are in direct close-range combat with player units that have clear line of sight.
 
----
+Detailed stamina parameters: MaxStamina (100 base +-5%), DrainRate (0.2/s, consumed only while moving), RecoveryRate (1.0/s, only while stationary). From full to empty: ~8 minutes moving. From empty to full: ~1.7 minutes stationary.
 
-## Recruitment
+| Stamina % | Speed Mult | Effect |
+|---|---|---|
+| 100-60% | 1.0x | Normal |
+| 60-30% | 0.7x | Affaticato |
+| 30-15% | 0.3x | Stanco + 0.5 HP/s |
+| <15% | 0.25x | Esausto + 2.0 HP/s |
 
-**Q: How are new units recruited?**
+### Resources
+Not in the initial implementation. Future versions may include gold, passive food generation, and a dynamic reinforcement system where the arrival rate and quantity of reinforcements depends on player actions such as attacking, defending, or remaining stationary, combined with a randomness factor.
 
-In sandbox and freeplay modes, provinces and cities can contain training bases or similar structures where new units can be recruited. The player starts with a base set of units but can recruit additional forces over time.
+### Recruitment
+In sandbox and freeplay modes, provinces and cities can contain training bases or similar structures where new units can be recruited. The player starts with a base set of units but can recruit additional forces over time. Reinforcements are limited and build slowly -- the system is still to be defined in detail. Recruitment speed, capacity, and availability will depend on the province or city infrastructure.
 
-Reinforcements are limited and build slowly — the system is still to be defined in detail. Recruitment speed, capacity, and availability will depend on the province or city infrastructure.
+### Prisoner Management
+Prisoners are tracked in a dedicated secondary panel accessible from the main panel list, consistent with the collapsible HOI4-style interface. The panel shows current prisoner count and their output in resources, labor, or potential troop conversion.
 
----
+### Base Building
+Base building is restricted to the sandbox and freeplay modes only. In campaign and story missions, gameplay is limited to pure field combat with no construction. The one exception is constructible bridges and camps, which are available in all modes.
 
-## Encampments
+### Encampments
+Encampments provide three benefits: a defensive combat bonus when the group inside is attacked, a reduction in morale loss over time, and an improvement to war medic healing efficiency. Units must be inside the encampment to receive these benefits. Any unit can build an encampment. Construction takes 2-10 in-game days depending on how many units assist. Units building cannot attack and must be defended. If they enter combat, construction progress is lost over time. No resources are required.
 
-**Q: What do encampments do and how are they built?**
+### Bridge Construction and Destruction
+Yes. Any unit can destroy a bridge. Any unit can construct a bridge given enough time. Construction takes 2-10 in-game days depending on assisting units. The following conditions must be met: at least one unit must be positioned on each bank of the river, the units engaged in construction cannot attack while building, and the construction site must not come under attack or it will be interrupted. Both sides of the river must be controlled by the same faction before construction can begin. Construction takes significant time and the building units are vulnerable throughout the process, requiring dedicated defense.
 
-Encampments provide three benefits: a defensive combat bonus when the group inside is attacked, a reduction in morale loss over time, and an improvement to war medic healing efficiency. Units must be inside the encampment to receive these benefits.
-
-Any unit can build an encampment. Construction takes 2–10 in-game days depending on how many units assist. Units building cannot attack and must be defended. If they enter combat, construction progress is lost over time. No resources are required.
-
----
-
-## Bridge Construction and Destruction
-
-**Q: Can bridges be built and destroyed?**
-
-Yes. Any unit can destroy a bridge. Any unit can construct a bridge given enough time. Construction takes 2–10 in-game days depending on assisting units. The following conditions must be met: at least one unit must be positioned on each bank of the river, the units engaged in construction cannot attack while building, and the construction site must not come under attack or it will be interrupted. Both sides of the river must be controlled by the same faction before construction can begin. Construction takes significant time and the building units are vulnerable throughout the process, requiring dedicated defense.
-
----
-
-## Future Structures
-
-**Q: What other structures are planned beyond bridges and encampments?**
-
+### Future Structures
 Watchtowers and mini fortresses are planned for a future development phase. They will not be part of the initial implementation.
 
----
-
-## Day and Night Cycle
-
-**Q: Is there a day and night cycle?**
-
+### Day and Night Cycle
 Not currently planned, but noted as a strong candidate for a future feature. A day and night cycle would reduce visibility for all factions at night and potentially affect unit efficiency and behavior.
 
 ---
 
-## Command Hierarchy
+## 8. Factions & Teams
 
-**Q: What is the full command hierarchy?**
+### Team System (Initial)
+For testing and initial combat development, factions are represented by a simple `Team` enum with three values:
+- **White**: No faction / test base. Default for all new units. Neutral -- usable as free-for-all or unaffiliated units.
+- **Red**: Faction 1. Rendered in red shades.
+- **Blue**: Faction 2. Rendered in blue shades.
 
-From lowest to highest rank:
+Units on the same team never attack each other (White team attacks/gets attacked by everyone). The `team <id|all> white|red|blue` console command sets a unit's team. The unit's render color is determined by its team (Red=red, Blue=blue, White=white), with stamina-based desaturation applied.
 
-1. Soldier - standard unit, no special indicator
-2. Capogruppo (Group Leader) - manages a small group
-3. Luogotenente (Lieutenant) - manages multiple groups
-4. Generale (General) - manages multiple lieutenants and their forces
-5. Capo dell'Esercito (Army Chief) - commands the entire army, only one permitted at a time
-
-The Capo dell'Esercito is mandatory. All other command ranks are optional and assigned by the player as needed. Having no commanders means units are less coordinated. A single army chief without subordinate commanders is possible but limits large-scale coordination. The player designs the command structure to suit their strategy.
-
----
-
-## Command Bonuses
-
-**Q: How do commander bonuses work?**
-
-Commanders provide bonuses within a small physical radius around them on the map. The bonus applies to units nearby regardless of group assignment. As rank increases, the quality of the bonus changes, but the radius remains small, meaning the physical position of the commander on the battlefield is tactically important. Commanders higher up in the hierarchy still belong to a specific group and position on the map; their bonus does not apply army-wide from anywhere.
-
----
-
-## Army Chief Death
-
-**Q: What happens when the army chief dies?**
-
-The army chief's death causes a massive army-wide morale loss. The player must then appoint a new army chief. To do so, a unit must be designated from a group that is not currently engaged in active combat. The new chief can be any unit type: a regular soldier, a group leader, a lieutenant, or a general if one exists. The appointment cannot happen instantly; it takes a set number of in-game days. During this period the army operates without a chief, compounding the morale loss.
-
-In campaign mode, the consequences of the army chief's death may also be defined by the specific mission parameters.
-
----
-
-## Army Chief Role
-
-**Q: Can the army chief fight directly?**
-
-Yes. The army chief can engage in direct combat as a standard unit of its type while also providing command bonuses to nearby units. Using the chief in combat carries the risk of losing the most important command figure in the army.
-
----
-
-## Time System
-
-**Q: How is in-game time structured?**
-
-Five real-world minutes equals one in-game day. Movement distances are realistic relative to this scale; for example, a march equivalent to the distance between Rome and Vicenza would take between ten and fifteen in-game days depending on unit speed and terrain. Map sizes range from small to medium to enormous. A game session on a small map may conclude in a few hours of real time. A full session on an enormous map could last days or weeks of real time.
-
----
-
-## Time Speed Controls
-
-**Q: Can the player control time speed?**
-
-Yes. The player can set time to any of the following speeds at any moment: 0 (paused), 1/8, 1/4, 1/2, 1, 2, 4, or 8 times normal speed. At 1x speed one day lasts five real minutes. At 1/8 speed one day lasts approximately forty real minutes, enabling deep strategic play. At 8x speed one day lasts approximately thirty-seven seconds, suitable for rapid resolution of low-intensity periods.
-
----
-
-## Save System
-
-**Q: How does saving work?**
-
-Both manual and automatic saving are supported. Multiple save slots are available.
-
-Save files use JSON format (via System.Text.Json) for readability and ease of debugging. Every state necessary to resume a session is saved: unit positions, health, status, morale, fatigue, command hierarchy, legion assignments, diplomacy state, territory control, fog of war progress, construction progress, and all other relevant data.
-
----
-
-## AI — General Approach
-
-**Q: How does the AI work and when will it be developed?**
-
-AI development is deferred until all core mechanics, unit systems, and terrain systems are stable and implemented. The initial implementation will use simple aggressive behavior (rush toward player units). Tactical behaviors such as flanking, strategic retreats, and encirclement are planned for a later phase.
-
-The specific AI architecture (utility AI, behavior tree, state machine, etc.) has not been decided yet and will be determined when AI development begins.
-
-In sandbox mode, the AI manages its own resources, troop production, morale, territorial decisions, and diplomacy autonomously. Future versions will support multiple AI factions operating simultaneously on the same map.
-
----
-
-## Faction Customization
-
-**Q: How are factions defined?**
-
+### Faction Customization (Planned)
 The player chooses a name and a color for their faction. AI factions are each assigned a distinct color. The color system must support the brightness and saturation variation used by the stamina system, so any chosen color can be rendered at full and reduced intensity to represent unit fatigue.
 
----
-
-## Game Start Flow
-
-**Q: How does a game session start?**
-
-In sandbox/freeplay mode, the player goes through a setup phase where they choose:
-- Map
-- Faction name and color
-- Number of AI factions
-- AI difficulty settings (if applicable)
-
-At the start of the match, the player has a pre-organized mini army with pre-configured legions and command hierarchy. Before unpausing, the player can reorganize legions, reassign commanders, adjust formations, and position units. The game begins paused to allow this setup.
-
----
-
-## Number of Factions
-
-**Q: How many factions can exist in a sandbox game?**
-
+### Number of Factions
 The player chooses freely. The minimum is one AI faction opposing the player. There is no defined maximum, though the engine's performance limits will determine a practical ceiling.
 
----
+### AI Approach
+AI development is deferred until all core mechanics, unit systems, and terrain systems are stable and implemented. The initial implementation will use simple aggressive behavior (rush toward player units). Tactical behaviors such as flanking, strategic retreats, and encirclement are planned for a later phase. The specific AI architecture (utility AI, behavior tree, state machine, etc.) has not been decided yet and will be determined when AI development begins. In sandbox mode, the AI manages its own resources, troop production, morale, territorial decisions, and diplomacy autonomously. Future versions will support multiple AI factions operating simultaneously on the same map.
 
-## AI Alliances and Diplomacy
-
-**Q: Can AI factions ally with each other and how does diplomacy work?**
-
+### AI Alliances and Diplomacy
 Yes. AI factions independently evaluate their strategic situation and may form alliances with each other if it is in their interest. The player may find multiple AI factions cooperating against them.
 
 The player can interact diplomatically during a game. Available diplomatic actions include:
@@ -560,200 +414,39 @@ The player can interact diplomatically during a game. Available diplomatic actio
 
 Reputation starts at a mid-level value. Each day that passes increases reputation very slightly. Breaking agreements or betraying allies decreases reputation and generates hostility. Hostility also spreads: if the player breaks an agreement with a faction, that faction's allies also gain hostility toward the player. Low reputation makes future negotiations significantly harder.
 
----
+### Game Start Flow
+In sandbox/freeplay mode, the player goes through a setup phase where they choose:
+- Map
+- Faction name and color
+- Number of AI factions
+- AI difficulty settings (if applicable)
 
-## HUD Layout
-
-**Q: How is the screen layout organized?**
-
-The HUD is designed to be clean, orderly, and intuitive:
-- **Top-right**: Minimap (clickable to expand to full-screen map view)
-- **Left side**: Unit information panel, hierarchy tree panel, prisoner panel, and other secondary panels (collapsible, HOI4-style)
-- **Center**: Main game map / viewport
-
-Primary information (minimap, selected unit info) is always visible and prominent. Secondary panels (hierarchy tree, prisoners, morale overview) are accessible but do not clutter the default view. Specific positioning of remaining elements is still to be decided, with cleanliness as the guiding principle.
+At the start of the match, the player has a pre-organized mini army with pre-configured legions and command hierarchy. Before unpausing, the player can reorganize legions, reassign commanders, adjust formations, and position units. The game begins paused to allow this setup.
 
 ---
 
-## Minimap
+## 9. Game Modes
 
-**Q: How does the minimap work?**
+### Campaign
+Story-driven missions on a world map with branching paths. Each mission has its own specific victory and defeat conditions (to be defined per mission). The campaign uses a series of missions with branching paths, presented on a World Conqueror 4-style world map. The player can see and navigate between territories. Each mission is fresh: nothing is carried over between missions -- no global resources, upgrades, or tech trees. The world map uses provinces with defined territory borders and capitulation conditions. Units belong to provinces but can move freely within them (no grid). Territory control works similarly to War of Dots -- units conquer and control territory by presence. Missions have varied objectives including capturing a specific point, defending for a set duration, escorting the commanding officer, eliminating all enemy forces, and combinations of these objectives.
 
-The minimap shows the full map with terrain and fog of war (only visible areas are displayed). It is clickable to pan the camera.
+### Versus-AI Skirmish
+Single-map battles with defined objectives.
 
-Displayed content depends on zoom level:
-- At maximum zoom: individual units are shown as dots
-- At medium zoom: only group leaders (Capogruppo) are shown
-- At higher zoom: Luogotenente (small icons), Generale (medium icons), Capo dell'Esercito (large icon)
-- At maximum zoom out: only the Army Chief icon and large legion indicators are visible
+### Sandbox
+Permanent free-play mode with AI opponents. No victory or game over condition -- the player can continue observing even after losing all units, watching other factions interact.
 
-The minimap also shows a viewport rectangle indicating the current camera position and a red exclamation mark alert for groups at risk of surrendering.
+### Freeplay
+Like sandbox, but with win/lose conditions. The player wins by controlling 70% of all territories (including allies and puppets) while not at war. Game over occurs if the player is fully conquered. However, if a peace treaty leaves the player as an independent nation or puppet with reduced territory, the game continues.
 
----
-
-## User Interface Philosophy
-
-## Hierarchy Tree Panel
-
-**Q: How does the hierarchy tree panel work?**
-
-The panel shows an expandable/collapsible tree of all legions and their subgroups (similar to Windows Explorer tree view). It does not show individual units — the player must use the map to see individual units after selecting a legion.
-
-Each legion entry displays the legion name (defaults to the commander's name, changeable by the player) and its commander rank. Clicking a legion entry selects it and can center the camera on it.
-
-It is part of the collapsible HOI4-style panel system.
-
-**Q: What is the design philosophy for the UI?**
-
-The interface is designed to be simple and approachable for new players but progressively reveals complexity as the player engages deeper systems. All panels are collapsible and toggleable in a style similar to Hearts of Iron IV. The currently planned panels are: the unit and group hierarchy tree, the minimap, the morale overview, the selected unit or group information panel, and the prisoner management panel. Additional panels may be added as development progresses.
+### Story and Narrative
+Not yet defined. Story, narrative, and campaign-specific content will be designed after the core mechanics, unit systems, and terrain systems are fully implemented and stable.
 
 ---
 
-## Camera Controls
+## 10. Technical Architecture
 
-**Q: How is the camera controlled?**
-
-The camera can be controlled via:
-- WASD or arrow keys
-- Middle mouse button drag
-- Edge scrolling (mouse at screen edge)
-- Click on minimap to pan
-
-Additional camera features (to be confirmed): follow/center mode that tracks the selected unit or group when issued from the map or hierarchy panel.
-
----
-
-## Visual Feedback in Combat
-
-**Q: What visual effects occur during combat?**
-
-When a unit takes damage, the border of its geometric shape briefly flashes dark red. There are no particle effects, blood, or complex animations, consistent with the abstract geometric visual style. When a unit dies, its shape remains on the battlefield as a darkened or greyed-out silhouette for a few seconds before disappearing entirely.
-
----
-
-## Wounded Unit Penalties
-
-**Q: Do wounded units perform worse?**
-
-Yes. A unit's combat effectiveness and movement speed decrease proportionally with its remaining health. A unit at fifty percent health is significantly slower and weaker than one at full health. This makes the war medic a strategically important unit rather than a secondary consideration.
-
----
-
-## Hotkeys
-
-**Q: Are hotkeys configurable?**
-
-Hotkey remapping will be implemented in a future phase of development.
-
----
-
-## Tutorial
-
-**Q: Is there a tutorial?**
-
-No tutorial is planned for the current phase. Players are expected to explore the mechanics independently. Tooltips and a manual are not planned for the initial implementation — they may be considered in a future phase.
-
----
-
-## Screen Modes
-
-**Q: What screen modes are supported?**
-
-Three display modes:
-- **Fullscreen**: exclusive fullscreen at native resolution
-- **Fullscreen (borderless windowed)**: with taskbar visible
-- **Windowed**: fixed size (smaller than fullscreen, e.g. 1440×920 or similar that maintains proper aspect ratio)
-
-The window is not freely resizable by the user. The UI scales to fit the selected resolution while maintaining aspect ratio.
-
----
-
-## Loading Screens
-
-**Q: Are there loading screens?**
-
-Yes. Loading screens appear during transitions (menu to game, between missions, loading saves). They are minimal but polished — showing a loading indicator and possibly a simple visual or tip, given that save files may take some time to load.
-
----
-
-## Main Menu
-
-**Q: Will there be a main menu?**
-
-Yes, but it will be implemented in a later phase. The initial focus is entirely on core gameplay mechanics.
-
----
-
-## Settings
-
-**Q: What settings will be available?**
-
-Graphics quality is fixed at a low level for the initial implementation and may be expanded later. Volume controls and FPS cap settings will also be added in a later phase.
-
-Default language is English for initial development. Italian and additional languages will be added later.
-
----
-
-## Fonts
-
-**Q: What font is used for UI text?**
-
-For the initial implementation, a clean, clearly readable sans-serif font (e.g., a standard system font or a freely licensed alternative like Open Sans or Roboto). Font styling and themed fonts (medieval-style, etc.) will be considered in a later visual polish phase.
-
----
-
-## Language Support
-
-**Q: What languages will the game support?**
-
-English and Italian from the start. Additional languages may be added after the core game is stable.
-
----
-
-## Game Name
-
-**Q: What is the game called?**
-
-Not yet decided. The name will be chosen once the game has taken sufficient shape during development.
-
----
-
-## Multiplayer
-
-**Q: Will the game have multiplayer?**
-
-Multiplayer is not planned for the initial release. After the single-player game is stable and bugs are resolved, offline multiplayer (hot-seat or shared-screen with save sharing) may be considered — allowing friends to play in sandbox mode, cooperatively on the same nation, or as opposing nations.
-
----
-
-## Project Scope
-
-**Q: Who is developing the game and what are the release plans?**
-
-The game is a solo personal project maintained in a private GitHub repository. If development reaches a satisfactory level of quality, the game may be released publicly on a distribution platform, either free or as a paid title. All development will remain private until that point.
-
----
-
-## Unit Facing Direction
-
-**Q: Do units have a facing direction and does it affect gameplay?**
-
-In the initial implementation, facing direction is purely visual (units rotate toward their movement direction). Vision range is a circle radius.
-
-Unit facing direction and its effects on combat (e.g., flanking/rear bonuses) and vision (directional cones) are planned for a future phase of development.
-
-## Vision Range Shape
-
-**Q: Is vision range a circle or a directional cone?**
-
-A circle radius for the current implementation. A directional cone based on the unit's facing direction will be considered for a future phase.
-
----
-
-## Code Architecture
-
-**Q: How is the project structured?**
-
+### Code Architecture
 The solution is split into multiple assemblies for separation of concerns and testability:
 
 ```
@@ -763,18 +456,20 @@ MedievalWarSim.sln
 │   ├── Screens/                  -- Game states (Menu, Playing, Paused)
 │   └── Content/                  -- Assets (.mgcb)
 ├── MedievalWarSim.Core/          -- Core library (no MonoGame dependency)
-│   ├── Entities/                 -- Unit, Group, Legion, Commander
-│   ├── Components/               -- Health, Position, Stamina, Morale, etc.
-│   ├── Systems/                  -- Game logic (movement, combat, morale AI)
-│   ├── Interfaces/               -- ISystem, IComponent, etc.
-│   ├── Managers/                 -- EntityManager, GroupManager, etc.
-│   ├── Math/                     -- Vector2 extensions, geometry helpers
-│   └── Enums/                    -- UnitType, TerrainType, Stance, etc.
+│   ├── Camera.cs                 -- Camera state (X, Y, Zoom), transforms (ScreenToWorld, WorldToScreen)
+│   ├── Components/               -- Health, Position, Move, Stamina, Vision, UnitType
+│   ├── Data/                     -- UnitStats, stat tables and roll methods
+│   ├── DataStructures/           -- SpatialGrid
+│   ├── Enums/                    -- UnitType, TerrainType, Stance, etc.
+│   └── Managers/                 -- EntityManager (SoA arrays, free-list O(1) create/destroy)
+├── MedievalWarSim.Game/          -- Main executable (MonoGame project)
+│   ├── Game1.cs                  -- MonoGame Game class
+│   ├── CameraController.cs       -- Input: WASD pan, scroll zoom, middle-mouse drag
+│   ├── Screens/                  -- Game states (Menu, Playing, Paused)
+│   └── Content/                  -- Assets (.mgcb)
 ├── MedievalWarSim.Rendering/     -- Rendering (MonoGame-dependent)
-│   ├── Camera/
-│   ├── Shapes/                   -- Pentagon, Triangle, Hexagon drawing
-│   ├── LOD/                      -- Level-of-detail system
-│   └── Terrain/                  -- Terrain rendering
+│   ├── Shapes/                   -- ShapeRenderer: polygon fill/border, circle, rectangle drawing
+│   └── ...
 ├── MedievalWarSim.UI/            -- UI panels
 │   ├── Panels/                   -- Minimap, Info, Hierarchy, Prisoner
 │   └── Controls/                 -- Buttons, sliders, tree view
@@ -785,82 +480,55 @@ MedievalWarSim.sln
 
 **Key principles**: Game logic in Core has zero dependency on MonoGame, making it testable. Rendering and UI are thin layers that read state and draw.
 
----
+### Technology Stack (Detailed)
+- **Runtime**: .NET 8 (LTS) -- stable, cross-platform, good performance
+- **Framework**: MonoGame 3.8.x -- mature 2D engine
+- **UI**: Custom UI system built on MonoGame SpriteBatch (no external UI library) -- full control over HOI4-style collapsible panels, hierarchy tree, and minimap
+- **ECS Architecture**: Optional -- may use an ECS library (e.g., Arch or DefaultEcs) for managing hundreds of units if performance requires it; otherwise plain GameObject composition
+- **Serialization**: System.Text.Json for save files and configuration data
+- **Audio**: MonoGame's built-in audio (SoundEffect) -- deferred to future phase
+- **Input**: MonoGame's built-in Keyboard, Mouse input handling
+- **Content Pipeline**: MonoGame Content Pipeline (.mgcb) for asset management
+- **Rendering**: SpriteBatch for 2D drawing of geometric shapes, terrain, and UI
 
-## Development Console
+### Development Approach
+Incremental and methodical. Each system is implemented, tested, and benchmarked independently before moving to the next. FPS benchmarking is part of every phase to ensure the engine can handle five hundred to one thousand or more simultaneous units before complexity increases. No system is added until the foundation beneath it is confirmed to be stable and performant.
 
-**Q: Are there debug tools?**
+### Initial Development Roadmap
 
-A developer console accessible in-game (toggleable hotkey) provides:
-- **FPS overlay** always available
-- **Commands**: spawn units, delete units, set unit state/stance, teleport, change morale/stamina/health, trigger events, and other debug operations
-- Console is available during development builds only
-
----
-
-## Performance Targets
-
-**Q: What are the performance targets?**
-
-- **100+ FPS** with 500 units actively visible on screen
-- Support for **1000–2000 total units** across the entire map (including dormant/simulated units)
-
-Performance benchmarking is part of every development phase to ensure targets are met before adding complexity.
-
-## Development Approach
-
-**Q: What is the development methodology?**
-
-Incremental and methodical. Each system is implemented, tested, and benchmarked independently before moving to the next. FPS benchmarking is part of every phase to ensure the engine can handle five hundred to one thousand or more simultaneous units before complexity increases. The initial development steps are:
-
-1. Render a single unit on screen
-2. Render a configurable number of units
-3. Implement single unit selection
-4. Implement movement for a selected unit
-5. Implement drag-select for multiple units and group movement
-6. Benchmark and optimize for large unit counts
-
-No system is added until the foundation beneath it is confirmed to be stable and performant.
-
----
-
-## Initial Development Roadmap
-
-**Q: What is the step-by-step plan for the initial implementation?**
-
-### Phase 0 — Project Setup
+#### Phase 0 -- Project Setup
 - Create solution with all projects (Game, Core, Rendering, UI, Tests)
 - MonoGame empty project with Game1 loop
 - Dev console with basic commands (spawn, delete, set position, help)
 - FPS overlay
 
-### Phase 1 — Single Unit
+#### Phase 1 -- Single Unit
 - Render a geometric shape (pentagon) on screen
 - Unit entity with PositionComponent, ShapeComponent
 - Camera pan (WASD/middle mouse/edge scroll) and zoom (scroll wheel)
 - Select unit with left-click (raycast against shape bounds)
 - Right-click to move unit (simple direct movement, no pathfinding yet)
 
-### Phase 2 — Multiple Units
+#### Phase 2 -- Multiple Units
 - Render configurable number of units
 - Drag-box selection
 - Ctrl+click to add/remove from selection
 - Move selected units toward clicked position (formation-relative offsets)
 - Basic collision avoidance (simple separation steering)
 
-### Phase 3 — Groups and Legions
+#### Phase 3 -- Groups and Legions
 - Group selected units into a legion via right-click context menu
 - Group movement following leader in formation order
 - Hierarchy tree panel (read-only initially)
 - Dev console commands for legion management
 
-### Phase 4 — Terrain and Input Polish
+#### Phase 4 -- Terrain and Input Polish
 - Render terrain provinces with smooth borders (colored edges, no fill)
 - Basic spatial grid for local movement/pathfinding
 - Terrain speed modifiers affecting movement
 - Right-click on enemy selection stub (no combat yet)
 
-### Phase 5 — Benchmarking
+#### Phase 5 -- Benchmarking
 - Stress test with 500, 1000, 2000 units
 - Optimize rendering (LOD, batching)
 - Optimize update loop (spatial queries, sleeping dormant units off-screen)
@@ -870,68 +538,8 @@ Each phase must be stable and performant before moving to the next.
 
 ---
 
-## Command Hierarchy — Detailed
+## 11. NEXT STEPS: Core Unit Mechanics
 
-**Q: How are commanders assigned and how do orders propagate?**
-
-Any unit can be promoted to a commander rank. The Army Chief is mandatory; all other ranks are optional and assigned by the player.
-
-Each rank provides:
-- **Capo dell'Esercito (Army Chief):** Highest stats (slightly above General), provides a bonus radius within its own group and surrounding area. Can issue global stance orders (expand, hold, attack-move, etc.) that propagate to every unit in the army. Must be designated from a non-engaged group; death causes massive army-wide morale loss and requires 3+ in-game days to replace.
-- **Generale (General):** Moderate stats, issues orders to all groups under their command. If General says hold, all units in their command chain hold.
-- **Luogotenente (Lieutenant):** Lower stats, controls multiple groups. Orders apply only to groups directly under them.
-- **Capogruppo (Group Leader):** Small bonus to their own group only.
-- **Soldier:** No command ability.
-
-Orders flow top-down. A higher-ranking order overrides lower ones. The player can issue orders at any level of the hierarchy.
-
-**Q: How does melee combat and unit collision work?**
-
-Units have a small collision radius — they cannot overlap and maintain a minimum distance from each other. Melee combat requires units to be adjacent (within their attack reach). Ranged units engage from their respective weapon range.
-
-Multiple units can attack or target the same enemy simultaneously. The player can configure how densely units should position themselves (spread out vs. tight formation), affecting both collision spacing and combat engagement distances.
-
-**Q: How is combat calculated in detail?**
-
-Combat uses numeric formulas with probability and random factors. Each unit has stats (attack power, defense, health) that interact with the target's type and current state.
-
-**Hit chance** depends on multiple factors: the attacker's unit type, the target's unit type (e.g., cavalry has reduced hit chance against infantry in melee), range, terrain, fatigue level, and morale status. A random roll determines if the attack lands.
-
-When a hit lands, **damage is direct** (flat reduction to the target's health), modified by the attacker's attack stat versus the target's defense stat, plus a small random variance. Wounded units deal and receive modified damage proportional to their remaining health.
-
-**Q: How does pathfinding work for individual units and groups?**
-
-The pathfinding system uses a hierarchical approach with two layers. At the macro level, the map is divided into provinces (large regions) that units navigate between. Within each province, a localized spatial grid handles fine-grained movement.
-
-For groups, units follow the group leader in a loose formation rather than each unit calculating its own full path. The leader computes the macro-level route through provinces; individual units handle local obstacle avoidance within the spatial grid.
-
-Terrain types affect path costs at the spatial grid level, with hills, forests, rivers, and mountains each applying their respective movement speed modifiers and bonuses during path calculation.
-
----
-
-## Visual Hierarchy and Zoom LOD (Planned)
-
-To ensure clarity and performance on a massive scale, the game uses a Level of Detail (LOD) system tied to the camera zoom:
-
-1. **Soldier Level (1.0x → 0.25x)**:
-   - **Focus**: Individual micro-management and combat.
-   - **Visuals**: Full geometric shapes (polygons), individual rotations, health bars, and smooth borders.
-   - **Command**: Direct control of every single unit.
-
-2. **Lieutenant Level (0.25x → 0.1x)**:
-   - **Focus**: Squad-level operations (50-100 units).
-   - **Visuals**: Individual soldiers fade into compact color blocks/formations.
-   - **Icons**: Medium-sized **Lieutenant** icons appear as primary tactical anchors. Individual HP bars are replaced by a single squad health indicator.
-
-3. **Strategic Level (0.1x → 0.01x)**:
-   - **Focus**: Global theater and division maneuvers.
-   - **Generals**: Large, prominent icons representing entire army wings (1000+ units).
-   - **Army Chief**: A small but visually unique/special icon (e.g., golden crown/eagle). Smaller than Generals to emphasize the "brain" of the army over brute force.
-   - **Visuals**: Map-wide perspective; only command figures and major movement vectors are rendered.
-
----
-
-### NEXT STEPS: Core Unit Mechanics
 Before implementing the LOD system, development will focus on:
 1. **Combat System**: Auto-attack logic, damage calculation, and unit-type advantages.
 2. **Stances**: Implementation of **Hold**, **Attack**, and **Move** behaviors.
@@ -939,7 +547,7 @@ Before implementing the LOD system, development will focus on:
 
 ---
 
-## DEVELOPING
+## 12. DEVELOPING
 
 ### 16/05/2026 — Mouse click detection, focus handling, thread safety
 
@@ -1004,7 +612,7 @@ Before implementing the LOD system, development will focus on:
 - **Camera system extracted**:
   - `Core/Camera.cs` — pure state (X, Y, Zoom) + transforms (ScreenToWorld, WorldToScreen). No MonoGame dependency.
   - `Game/CameraController.cs` — WASD pan, middle-mouse drag, scroll zoom with zoom-towards-mouse (world point under cursor stays fixed).
-- **Zoom limits**: Min=0.25x (fully zoomed in), Max=4x (fully zoomed out). Scroll up = zoom in (×1.1), scroll down = zoom out (×0.9).
+- **Zoom limits**: Min=0.25x (fully zoomed in), Max=4x (fully zoomed out). Scroll up = zoom in (x1.1), scroll down = zoom out (x0.9).
 - **Debug overlay** (SpriteFont via content pipeline): FPS counter top-right, zoom level bottom-right.
 - **`zoom` command**: shows current zoom + limits in console.
 - **Culling system** (3 zones):
