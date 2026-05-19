@@ -79,22 +79,16 @@ public partial class GameScreen : IDisposable
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
     private static bool IsCtrlHeld()
         => (GetAsyncKeyState(0xA2) & 0x8000) != 0 ||
            (GetAsyncKeyState(0xA3) & 0x8000) != 0;
 
     private readonly IntPtr _gameWindowHandle;
-    private readonly uint _processId;
 
     private bool IsGameFocused()
     {
         IntPtr fw = GetForegroundWindow();
-        if (fw == IntPtr.Zero) return false;
-        GetWindowThreadProcessId(fw, out uint pid);
-        return pid == _processId;
+        return fw != IntPtr.Zero && fw == _gameWindowHandle;
     }
 
     private static float GetUnitRadius(UnitType type) => UnitStats.GetBaseRadius(type);
@@ -103,7 +97,6 @@ public partial class GameScreen : IDisposable
     {
         _font = font;
         _gameWindowHandle = FindWindow(null, "MedievalWarSim");
-        _processId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
         _cameraController = new CameraController(_camera);
         _entityManager = new EntityManager();
         _shapeRenderer = new ShapeRenderer(graphicsDevice);
