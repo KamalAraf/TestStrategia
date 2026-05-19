@@ -695,6 +695,21 @@ Before implementing the LOD system, development will focus on:
 - **Camera Dinamica**: Esteso il limite di Zoom Out a 30x per permettere la gestione tattica di campi di battaglia vasti chilometri.
 - **Margini di Rendering**: Aumentati a 2500px per supportare le alte velocità senza effetti di comparsa improvvisa (pop-in).
 
+### 19/05/2026 — Aggiornamento valori definitivi unità (Speed/HP/Radius)
+
+- **Nuovi valori unità** (design definitivo, ±5% roll):
+
+| Unit | Speed | Radius | HP | Sight | MaxStamina |
+|---|---|---|---|---|---|
+| Infantry | 160 | 30 | 110 | 1500 | 100 |
+| Archer | 180 | 28 | 60 | 2250 | 100 |
+| Cavalry | 500 | 40 | 90 | 3000 | 100 |
+| Ballista | 50 | 55 | 150 | 2250 | 100 |
+| Medic | 200 | 28 | 80 | 1500 | 100 |
+
+- **README**: aggiornata tabella stats sezione 3, aggiunta tabella Combat Stats (AttackRange/Damage/Cooldown/DPS) sezione 4 con matchup 1v1
+- **UnitStats.cs**: allineato codice ai nuovi valori Speed/HP/Radius
+
 ### 19/05/2026 — Stamina System + Fix iterazione codice morto
 
 **Stamina System:**
