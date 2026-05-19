@@ -15,6 +15,7 @@ public class EntityManager
     private readonly StaminaComponent[] _stamina;
     private readonly TeamComponent[] _teams;
     private readonly bool[]           _alive;
+    private readonly float[]          _deathTimers;
 
     private readonly Stack<int> _freeSlots = new();
     private readonly int[]      _activeEntities;
@@ -32,6 +33,7 @@ public class EntityManager
         _stamina = new StaminaComponent[MAX_ENTITIES];
         _teams = new TeamComponent[MAX_ENTITIES];
         _alive = new bool[MAX_ENTITIES];
+        _deathTimers = new float[MAX_ENTITIES];
         _activeEntities = new int[MAX_ENTITIES];
         _entityToIndex = new int[MAX_ENTITIES];
         Array.Fill(_entityToIndex, -1);
@@ -57,6 +59,7 @@ public class EntityManager
     public void Destroy(int entityId)
     {
         if (!IsAlive(entityId)) return;
+        _deathTimers[entityId] = 0f;
 
         int index = _entityToIndex[entityId];
         int lastEntityId = _activeEntities[_count - 1];
@@ -125,6 +128,16 @@ public class EntityManager
             throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
         return ref _teams[entityId];
     }
+
+    public ref float GetDeathTimer(int entityId)
+    {
+        if ((uint)entityId >= (uint)MAX_ENTITIES)
+            throw new ArgumentOutOfRangeException(nameof(entityId), entityId, "Invalid entity ID");
+        return ref _deathTimers[entityId];
+    }
+
+    public bool IsDying(int entityId)
+        => (uint)entityId < (uint)MAX_ENTITIES && _deathTimers[entityId] > 0f;
 
     public bool IsAlive(int entityId)
         => (uint)entityId < (uint)MAX_ENTITIES && _alive[entityId];

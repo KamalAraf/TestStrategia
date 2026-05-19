@@ -203,7 +203,8 @@ public partial class GameScreen
                         if (h.CurrentHP <= 0f)
                         {
                             h.CurrentHP = 0f;
-                            _entityManager.Destroy(eid);
+                            _entityManager.GetMove(eid).IsMoving = false;
+                            _entityManager.GetDeathTimer(eid) = 2.0f;
                             _selectedUnitIds.Remove(eid);
                             System.Console.WriteLine($"Unit {eid} died.");
                         }
@@ -212,7 +213,8 @@ public partial class GameScreen
                         h.CurrentHP = Math.Clamp(val, 0f, h.MaxHP);
                         if (h.CurrentHP <= 0f)
                         {
-                            _entityManager.Destroy(eid);
+                            _entityManager.GetMove(eid).IsMoving = false;
+                            _entityManager.GetDeathTimer(eid) = 2.0f;
                             _selectedUnitIds.Remove(eid);
                             System.Console.WriteLine($"Unit {eid} died.");
                         }

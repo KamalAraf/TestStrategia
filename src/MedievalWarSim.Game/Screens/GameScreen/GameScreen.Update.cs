@@ -60,15 +60,16 @@ public partial class GameScreen
             }
         }
 
-        // ---- Death cleanup (HP <= 0 from stamina drain) ----
+        // ---- Death trigger (HP <= 0 → start 2s death timer) ----
         var activeSnapshot = _entityManager.ActiveEntities;
         for (int i = activeSnapshot.Length - 1; i >= 0; i--)
         {
             int eid = activeSnapshot[i];
-            if (_entityManager.GetHealth(eid).CurrentHP <= 0f)
+            if (_entityManager.GetHealth(eid).CurrentHP <= 0f && !_entityManager.IsDying(eid))
             {
                 _entityManager.GetHealth(eid).CurrentHP = 0f;
-                _entityManager.Destroy(eid);
+                _entityManager.GetDeathTimer(eid) = 2.0f;
+                _entityManager.GetMove(eid).IsMoving = false;
                 _selectedUnitIds.Remove(eid);
             }
         }
@@ -77,6 +78,7 @@ public partial class GameScreen
         foreach (int i in _entityManager.ActiveEntities)
         {
             if (!_entityManager.IsAlive(i)) continue;
+            if (_entityManager.IsDying(i)) continue;
             ref var move = ref _entityManager.GetMove(i);
             if (!move.IsMoving) continue;
 
@@ -132,7 +134,7 @@ public partial class GameScreen
 
             foreach (int j in _nearbyBuffer)
             {
-                if (j == i || !_entityManager.IsAlive(j)) continue;
+                if (j == i || !_entityManager.IsAlive(j) || _entityManager.IsDying(j)) continue;
                 ref var posJ = ref _entityManager.GetPosition(j);
                 float rJ = UnitStats.GetBaseRadius(_entityManager.GetUnitType(j).Type);
                 float minDist = radius + rJ + 3f;
@@ -204,6 +206,7 @@ public partial class GameScreen
         // ---- Stationary separation (resolve overlaps for all entities) ----
         foreach (int i in _entityManager.ActiveEntities)
         {
+            if (_entityManager.IsDying(i)) continue;
             ref var pos = ref _entityManager.GetPosition(i);
             float radius = UnitStats.GetBaseRadius(_entityManager.GetUnitType(i).Type);
 
@@ -222,7 +225,7 @@ public partial class GameScreen
 
             foreach (int j in _nearbyBuffer)
             {
-                if (j <= i || !_entityManager.IsAlive(j)) continue;
+                if (j <= i || !_entityManager.IsAlive(j) || _entityManager.IsDying(j)) continue;
                 ref var posJ = ref _entityManager.GetPosition(j);
                 float rJ = UnitStats.GetBaseRadius(_entityManager.GetUnitType(j).Type);
                 float minDist = radius + rJ + 3f;
@@ -267,6 +270,23 @@ public partial class GameScreen
                 {
                     posJ.X += nx * overlap;
                     posJ.Y += ny * overlap;
+                }
+            }
+        }
+
+        // ---- Death timer countdown ----
+        var snap2 = _entityManager.ActiveEntities;
+        for (int i = snap2.Length - 1; i >= 0; i--)
+        {
+            int eid = snap2[i];
+            ref float dtRef = ref _entityManager.GetDeathTimer(eid);
+            if (dtRef > 0f)
+            {
+                dtRef -= dt;
+                if (dtRef <= 0f)
+                {
+                    dtRef = 0f;
+                    _entityManager.Destroy(eid);
                 }
             }
         }

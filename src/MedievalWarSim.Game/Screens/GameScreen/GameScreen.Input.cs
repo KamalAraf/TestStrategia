@@ -52,6 +52,7 @@ public partial class GameScreen
 
                     foreach (int i in _entityManager.ActiveEntities)
                     {
+                        if (_entityManager.IsDying(i)) continue;
                         var pos = _entityManager.GetPosition(i);
                         if (pos.X >= wsx && pos.X <= wex && pos.Y >= wsy && pos.Y <= wey)
                             _selectedUnitIds.Add(i);
@@ -71,6 +72,7 @@ public partial class GameScreen
                 var (wx, wy) = _camera.ScreenToWorld(currentMouse.X, currentMouse.Y);
                 foreach (int id in _selectedUnitIds)
                 {
+                    if (_entityManager.IsDying(id)) continue;
                     ref var move = ref _entityManager.GetMove(id);
                     move.TargetX = wx;
                     move.TargetY = wy;
@@ -88,6 +90,7 @@ public partial class GameScreen
         int? clickedUnit = null;
         foreach (int i in _entityManager.ActiveEntities)
         {
+            if (_entityManager.IsDying(i)) continue;
             var   pos    = _entityManager.GetPosition(i);
             var   type   = _entityManager.GetUnitType(i).Type;
             float r      = UnitStats.GetBaseRadius(type);

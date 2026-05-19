@@ -108,7 +108,9 @@ public partial class GameScreen
                 var stamina = _entityManager.GetStamina(i);
                 float t = 1f - stamina.CurrentStamina / stamina.MaxStamina;
                 Color baseColor = TeamColors.GetColor(_entityManager.GetTeam(i).Team);
-                Color unitColor = Color.Lerp(baseColor, new Color(100, 100, 100), t);
+                Color unitColor = _entityManager.IsDying(i)
+                    ? new Color(100, 100, 100)
+                    : Color.Lerp(baseColor, new Color(100, 100, 100), t);
                 _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, unitColor, borderColor);
                 var hp = _entityManager.GetHealth(i);
                 if (hp.CurrentHP < hp.MaxHP && sr > 4f)
@@ -171,7 +173,9 @@ public partial class GameScreen
                 var stamina = _entityManager.GetStamina(i);
                 float t = 1f - stamina.CurrentStamina / stamina.MaxStamina;
                 Color baseColor = TeamColors.GetColor(_entityManager.GetTeam(i).Team);
-                Color unitColor = Color.Lerp(baseColor, new Color(100, 100, 100), t);
+                Color unitColor = _entityManager.IsDying(i)
+                    ? new Color(100, 100, 100)
+                    : Color.Lerp(baseColor, new Color(100, 100, 100), t);
                 _shapeRenderer.DrawShape(spriteBatch, sx, sy, sr, sides, rotation, unitColor, borderColor);
 
                 var hp = _entityManager.GetHealth(i);
